@@ -193,7 +193,12 @@
     width:100%; max-width:460px; padding:22px 18px 28px; max-height:88vh; overflow-y:auto;
   }
   .modal h2{ font-family:'Archivo Black',sans-serif; font-size:19px; margin:0 0 4px; }
-  .modal .modal-sub{ font-size:13px; color:var(--muted); margin-bottom:18px; }
+  .modal .modal-sub{
+    display:flex; align-items:center; gap:10px;
+    font-size:13px; color:var(--muted); margin-bottom:18px;
+  }
+  .modal .modal-sub svg{ width:44px; height:44px; flex:0 0 auto; }
+  .modal .modal-sub span{ flex:1; }
   .modal .field-group{ margin-bottom:16px; }
   .slider-row{ display:flex; align-items:center; gap:12px; }
   .slider-row input[type=range]{ flex:1; accent-color:var(--caution); }
@@ -610,7 +615,50 @@
 <div class="modal-backdrop" id="settingsModal">
   <div class="modal">
     <h2>Your numbers</h2>
-    <div class="modal-sub">This is the only setup step. Everything else in the app stays generic.</div>
+    <div class="modal-sub">
+      <svg viewBox="0 0 80 80" fill="none">
+        <defs>
+          <linearGradient id="furGFed" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#8a734f"/>
+            <stop offset="100%" stop-color="#5e4c33"/>
+          </linearGradient>
+          <linearGradient id="headGFed" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#dfcda6"/>
+            <stop offset="100%" stop-color="#b49a70"/>
+          </linearGradient>
+        </defs>
+
+        <!-- ears -->
+        <ellipse cx="16" cy="26" rx="10" ry="10.5" fill="url(#furGFed)"/>
+        <ellipse cx="64" cy="26" rx="10" ry="10.5" fill="url(#furGFed)"/>
+        <ellipse cx="16" cy="27.5" rx="5.2" ry="5.6" fill="#2a2117"/>
+        <ellipse cx="64" cy="27.5" rx="5.2" ry="5.6" fill="#2a2117"/>
+
+        <!-- head -->
+        <ellipse cx="40" cy="46" rx="28" ry="25" fill="url(#headGFed)"/>
+
+        <!-- mask -->
+        <path d="M17 38c6-9 16-13 23-13s17 4 23 13c-3 9-14 15-23 15s-20-6-23-15z" fill="#2c2416"/>
+
+        <!-- eyes -->
+        <ellipse cx="30" cy="40" rx="6" ry="7" fill="#fbf6e8"/>
+        <ellipse cx="50" cy="40" rx="6" ry="7" fill="#fbf6e8"/>
+        <circle cx="32" cy="41.5" r="3.8" fill="#181410"/>
+        <circle cx="48" cy="41.5" r="3.8" fill="#181410"/>
+        <circle cx="33.5" cy="39.5" r="1.4" fill="#fff"/>
+        <circle cx="49.5" cy="39.5" r="1.4" fill="#fff"/>
+
+        <!-- snout -->
+        <ellipse cx="40" cy="54" rx="12" ry="9" fill="#f0e6c9"/>
+        <ellipse cx="40" cy="50" rx="3.4" ry="2.8" fill="#241c13"/>
+        <path d="M40 53.5v3" stroke="#241c13" stroke-width="1.4"/>
+        <path d="M31 57c4 4.5 14 4.5 18 0" stroke="#241c13" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+
+        <!-- whiskers -->
+        <path d="M15 52l-9-1M15 57l-10 2M65 52l9-1M65 57l10 2" stroke="#f3ead2" stroke-width="1.2" stroke-linecap="round" opacity="0.85"/>
+      </svg>
+      <span>Feed Rocco these numbers once and he'll remember.</span>
+    </div>
 
     <div class="field-group">
       <div class="field-label"><span>Your $/hr target</span></div>

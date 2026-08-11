@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Trash or Cash</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap');
+
+  :root{
+    --bg: #131313;
+    --panel: #1C1C1C;
+    --panel-2: #232323;
+    --line: #383838;
+    --line-bright: #4a4a4a;
+    --text: #F4F1EA;
+    --muted: #9C9C94;
+    --cash: #3ECF6E;
+    --cash-dim: #163821;
+    --trash: #FF5A36;
+    --trash-dim: #3D1D14;
+    --caution: #FFD23F;
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  html,body{
+    margin:0; padding:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Sans', -apple-system, sans-serif;
+    min-height:100%;
+    overscroll-behavior:none;
+  }
+
+  .app{ max-width:460px; margin:0 auto; padding:18px 16px 40px; min-height:100vh; }
+
+  /* ---------- Header / Logo ---------- */
+  header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-icon{ width:52px; height:52px; flex:0 0 auto; }
+  .wordmark{ font-family:'Archivo Black', sans-serif; font-size:21px; line-height:1; letter-spacing:-0.01em; }
+  .wordmark .trash-word{ color:var(--trash); }
+  .wordmark .or-word{ color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:11px; display:block; letter-spacing:0.2em; margin:2px 0; }
+  .wordmark .cash-word{ color:var(--cash); }
+
+  .gear-btn{
+    width:40px; height:40px; border-radius:10px; border:1px solid var(--line);
+    background:var(--panel); display:flex; align-items:center; justify-content:center;
+    color:var(--muted); cursor:pointer;
+  }
+  .gear-btn:active{ background:var(--panel-2); }
+
+  /* ---------- Tabs ---------- */
+  .tabs{ display:flex; gap:8px; margin-bottom:18px; }
+  .tab{
+    flex:1; text-align:center; padding:12px 6px; border-radius:10px;
+    border:1.5px solid var(--line); background:var(--panel);
+    font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:12.5px;
+    letter-spacing:0.03em; color:var(--muted); cursor:pointer;
+  }
+  .tab.active{ border-color:var(--caution); color:var(--bg); background:var(--caution); }
+
+  /* ---------- Field blocks ---------- */
+  .field-group{ margin-bottom:14px; }
+  .field-label{
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.08em;
+    text-transform:uppercase; color:var(--muted); margin-bottom:6px; display:flex;
+    justify-content:space-between; align-items:baseline;
+  }
+  .field-label .req{ color:var(--caution); }
+  .field-input{
+    width:100%; padding:16px 14px; border-radius:12px; border:1.5px solid var(--line-bright);
+    background:var(--panel); color:var(--text); font-family:'IBM Plex Mono',monospace;
+    font-size:22px; font-weight:600; outline:none;
+  }
+  .field-input:focus{ border-color:var(--caution); }
+  .field-input::placeholder{ color:#5c5c56; font-weight:500; }
+  .field-hint{ font-size:12px; color:var(--muted); margin-top:5px; }
+
+  .required-block{
+    background:var(--panel); border:1px solid var(--line); border-radius:16px;
+    padding:16px; margin-bottom:14px;
+  }
+
+  /* ---------- More details (optional) ---------- */
+  .more-toggle{
+    width:100%; display:flex; align-items:center; justify-content:space-between;
+    background:transparent; border:1px dashed var(--line-bright); border-radius:12px;
+    padding:12px 14px; color:var(--muted); font-family:'IBM Plex Mono',monospace;
+    font-size:12px; letter-spacing:0.05em; cursor:pointer; margin-bottom:10px;
+  }
+  .more-toggle .chev{ transition:transform .2s ease; }
+  .more-toggle.open .chev{ transform:rotate(180deg); }
+  .more-panel{ display:none; margin-bottom:14px; }
+  .more-panel.open{ display:block; }
+  .more-panel .field-group{ margin-bottom:12px; }
+  .more-panel .field-input{ font-size:17px; padding:12px 14px; }
+
+  /* ---------- Waiting note (shown until required fields are filled) ---------- */
+  .waiting-note{
+    text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12.5px;
+    color:var(--muted); padding:18px 10px; border:1px dashed var(--line-bright);
+    border-radius:14px; margin:6px 0 20px;
+  }
+  .waiting-note.hidden{ display:none; }
+
+  /* ---------- Result ---------- */
+  .result{ display:none; }
+  .result.show{ display:block; animation:rise .25s ease; }
+  @keyframes rise{ from{ opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+
+  .verdict-card{
+    border-radius:18px; padding:24px 20px; text-align:center; margin-bottom:14px;
+    border:2px solid transparent;
+  }
+  .verdict-card.cash{ background:var(--cash-dim); border-color:var(--cash); }
+  .verdict-card.trash{ background:var(--trash-dim); border-color:var(--trash); }
+
+  .verdict-word{ font-family:'Archivo Black',sans-serif; font-size:44px; line-height:1; letter-spacing:-0.01em; }
+  .verdict-card.cash .verdict-word{ color:var(--cash); }
+  .verdict-card.trash .verdict-word{ color:var(--trash); }
+
+  .verdict-sub{ font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text); opacity:0.85; margin-top:6px; }
+
+  /* Tilt bar signature element */
+  .tilt-wrap{ margin:18px auto 4px; max-width:280px; }
+  .tilt-track{
+    position:relative; height:10px; border-radius:6px; background:var(--panel-2);
+    border:1px solid var(--line); overflow:visible;
+  }
+  .tilt-fill{
+    position:absolute; top:0; bottom:0; left:50%; border-radius:6px;
+    transition:width .3s ease, background .3s ease, left .3s ease;
+  }
+  .tilt-marker{
+    position:absolute; top:50%; width:2px; height:20px; background:var(--muted);
+    left:50%; transform:translate(-50%,-50%);
+  }
+  .tilt-labels{ display:flex; justify-content:space-between; font-family:'IBM Plex Mono',monospace;
+    font-size:10px; color:var(--muted); margin-top:6px; letter-spacing:0.05em; }
+
+  .stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px; }
+  .stat-box{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  .stat-box .stat-label{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-transform:uppercase;
+    letter-spacing:0.06em; color:var(--muted); margin-bottom:4px; }
+  .stat-box .stat-value{ font-family:'IBM Plex Mono',monospace; font-size:19px; font-weight:600; }
+
+  .breakeven-note{
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--muted);
+    text-align:center; padding:10px 6px 0;
+  }
+
+  /* ---------- Settings modal ---------- */
+  .modal-backdrop{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:50;
+    align-items:flex-end; justify-content:center;
+  }
+  .modal-backdrop.show{ display:flex; }
+  .modal{
+    background:var(--panel); border-top:1.5px solid var(--line-bright); border-radius:20px 20px 0 0;
+    width:100%; max-width:460px; padding:22px 18px 28px; max-height:88vh; overflow-y:auto;
+  }
+  .modal h2{ font-family:'Archivo Black',sans-serif; font-size:19px; margin:0 0 4px; }
+  .modal .modal-sub{ font-size:13px; color:var(--muted); margin-bottom:18px; }
+  .modal .field-group{ margin-bottom:16px; }
+  .slider-row{ display:flex; align-items:center; gap:12px; }
+  .slider-row input[type=range]{ flex:1; accent-color:var(--caution); }
+  .slider-value{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:16px; min-width:52px; text-align:right; }
+  .modal-save{
+    width:100%; padding:16px; border-radius:12px; border:none; background:var(--caution);
+    color:var(--bg); font-family:'Archivo Black',sans-serif; font-size:15px; cursor:pointer; margin-top:6px;
+  }
+  .derived-rate{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--caution); margin-top:6px; }
+
+  .footer-note{ text-align:center; font-size:11px; color:var(--muted); margin-top:22px; line-height:1.5; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="brand">
+      <svg class="brand-icon" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="canG" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#9aa0a3"/>
+      <stop offset="50%" stop-color="#d4d9db"/>
+      <stop offset="100%" stop-color="#787e81"/>
+    </linearGradient>
+    <linearGradient id="lidG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c7cccb"/>
+      <stop offset="100%" stop-color="#868c8a"/>
+    </linearGradient>
+    <linearGradient id="furG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8a734f"/>
+      <stop offset="100%" stop-color="#5e4c33"/>
+    </linearGradient>
+    <linearGradient id="headG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#dfcda6"/>
+      <stop offset="100%" stop-color="#b49a70"/>
+    </linearGradient>
+    <linearGradient id="billG5" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6BEF98"/>
+      <stop offset="100%" stop-color="#238C4A"/>
+    </linearGradient>
+    <radialGradient id="coinG5" cx="35%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#FFE9A0"/>
+      <stop offset="100%" stop-color="#C08E12"/>
+    </radialGradient>
+    <linearGradient id="coinRimG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a67a12"/>
+      <stop offset="100%" stop-color="#6b4c08"/>
+    </linearGradient>
+  </defs>
+
+  <ellipse cx="100" cy="180" rx="66" ry="9" fill="#000" opacity="0.35"/>
+
+  <!-- TAIL -->
+  <path d="M132 160c14 3 23-8 20-20-2-7-8-11-14-9" fill="none" stroke="url(#furG)" stroke-width="16" stroke-linecap="round"/>
+  <path d="M132 160c14 3 23-8 20-20-2-7-8-11-14-9" fill="none" stroke="#241d13" stroke-width="16" stroke-linecap="round" stroke-dasharray="5 9" opacity="0.5"/>
+
+  <!-- CAN BODY: simple rounded shape, no complex clipping -->
+  <path d="M56 108h88l-6 68a10 10 0 0 1-10 9H72a10 10 0 0 1-10-9z"
+        fill="url(#canG)" stroke="#161717" stroke-width="3.5" stroke-linejoin="round"/>
+  <!-- simple bold ribs -->
+  <g stroke="#3a3d3c" stroke-width="2.4" opacity="0.5">
+    <path d="M66 112l1 68"/><path d="M82 112l0 70"/><path d="M100 112l0 71"/>
+    <path d="M118 112l0 70"/><path d="M134 112l-1 68"/>
+  </g>
+  <g stroke="#fff" stroke-width="1.4" opacity="0.4">
+    <path d="M74 112l1 68"/><path d="M91 112l0 70"/><path d="M109 112l0 70"/><path d="M126 112l-1 68"/>
+  </g>
+  <!-- rim -->
+  <ellipse cx="100" cy="108" rx="44" ry="10" fill="#b3b8b6" stroke="#161717" stroke-width="3.5"/>
+  <ellipse cx="100" cy="106" rx="37" ry="7" fill="#1c1d1b"/>
+  <g fill="#eef1ee">
+    <circle cx="64" cy="108.5" r="2"/><circle cx="80" cy="112" r="2"/><circle cx="100" cy="113" r="2"/>
+    <circle cx="120" cy="112" r="2"/><circle cx="136" cy="108.5" r="2"/>
+  </g>
+
+  <!-- LID: simple dome, tilted, leaning left -->
+  <g transform="translate(38 148) rotate(-20)">
+    <ellipse cx="0" cy="0" rx="30" ry="27" fill="url(#lidG)" stroke="#161717" stroke-width="3.2"/>
+    <ellipse cx="0" cy="0" rx="22" ry="19.8" fill="none" stroke="#6f7573" stroke-width="1.8"/>
+    <ellipse cx="0" cy="0" rx="13" ry="11.7" fill="none" stroke="#6f7573" stroke-width="1.8"/>
+    <ellipse cx="0" cy="0" rx="7" ry="6.3" fill="#565a59" stroke="#161717" stroke-width="1.8"/>
+    <ellipse cx="-8" cy="-9" rx="9" ry="5" fill="#fff" opacity="0.18"/>
+  </g>
+
+  <!-- BILLS poking out -->
+  <g transform="rotate(-6 82 78)">
+    <rect x="68" y="52" width="28" height="40" rx="2" fill="url(#billG5)" stroke="#0f3d24" stroke-width="1.8"/>
+    <ellipse cx="82" cy="72" rx="6.5" ry="8" fill="none" stroke="#0f3d24" stroke-width="1"/>
+    <text x="82" y="75" font-family="IBM Plex Mono" font-weight="700" font-size="7.5" fill="#0f3d24" text-anchor="middle">$</text>
+  </g>
+
+  <!-- coins at base — edge thickness + reeded rim + embossed mark for a real coin read -->
+  <g transform="translate(155 178) scale(1.15)">
+    <ellipse cx="0" cy="2.4" rx="9" ry="6.5" fill="url(#coinRimG)"/>
+    <ellipse cx="0" cy="0" rx="9" ry="6.5" fill="url(#coinG5)" stroke="#7a5a0a" stroke-width="1"/>
+    <ellipse cx="0" cy="0" rx="6.7" ry="4.7" fill="none" stroke="#a67a12" stroke-width="0.8" opacity="0.75"/>
+    <text x="0" y="2.4" font-family="IBM Plex Mono" font-weight="700" font-size="6.5" fill="#8a5c0d" text-anchor="middle" opacity="0.9">&#162;</text>
+    <ellipse cx="-2.6" cy="-2" rx="2.6" ry="1.3" fill="#fff" opacity="0.35"/>
+  </g>
+  <g transform="translate(167 170) scale(0.9)">
+    <ellipse cx="0" cy="2.4" rx="9" ry="6.5" fill="url(#coinRimG)"/>
+    <ellipse cx="0" cy="0" rx="9" ry="6.5" fill="url(#coinG5)" stroke="#7a5a0a" stroke-width="1"/>
+    <ellipse cx="0" cy="0" rx="6.7" ry="4.7" fill="none" stroke="#a67a12" stroke-width="0.8" opacity="0.75"/>
+    <text x="0" y="2.4" font-family="IBM Plex Mono" font-weight="700" font-size="6.5" fill="#8a5c0d" text-anchor="middle" opacity="0.9">&#162;</text>
+    <ellipse cx="-2.6" cy="-2" rx="2.6" ry="1.3" fill="#fff" opacity="0.35"/>
+  </g>
+  <g transform="translate(142 184) scale(0.75)">
+    <ellipse cx="0" cy="2.4" rx="9" ry="6.5" fill="url(#coinRimG)"/>
+    <ellipse cx="0" cy="0" rx="9" ry="6.5" fill="url(#coinG5)" stroke="#7a5a0a" stroke-width="1"/>
+    <ellipse cx="0" cy="0" rx="6.7" ry="4.7" fill="none" stroke="#a67a12" stroke-width="0.8" opacity="0.75"/>
+    <text x="0" y="2.4" font-family="IBM Plex Mono" font-weight="700" font-size="6.5" fill="#8a5c0d" text-anchor="middle" opacity="0.9">&#162;</text>
+    <ellipse cx="-2.6" cy="-2" rx="2.6" ry="1.3" fill="#fff" opacity="0.35"/>
+  </g>
+
+  <!-- extra bills scattered near the base -->
+  <g transform="rotate(-14 45 172)">
+    <rect x="30" y="162" width="26" height="16" rx="2" fill="url(#billG5)" stroke="#0f3d24" stroke-width="1.6"/>
+    <ellipse cx="43" cy="170" rx="4.8" ry="5.8" fill="none" stroke="#0f3d24" stroke-width="0.9"/>
+  </g>
+  <g transform="rotate(10 160 190)">
+    <rect x="146" y="182" width="24" height="15" rx="2" fill="url(#billG5)" stroke="#0f3d24" stroke-width="1.6"/>
+  </g>
+
+  <!-- sparkles -->
+  <path d="M170 40l1.6 4.8 4.8 1.6-4.8 1.6-1.6 4.8-1.6-4.8-4.8-1.6 4.8-1.6z" fill="#FFD23F"/>
+  <path d="M22 60l1.2 3.6 3.6 1.2-3.6 1.2-1.2 3.6-1.2-3.6-3.6-1.2 3.6-1.2z" fill="#FF9A3D"/>
+
+  <!-- RACCOON — simplified: paws are big single blobs directly on the rim, no elbow segment -->
+  <ellipse cx="99" cy="90" rx="27" ry="18" fill="url(#furG)"/>
+
+  <!-- arms: one smooth capsule shape each, shoulder straight to paw, no bend -->
+  <path d="M78 82c-14 2-24 12-25 26 8 2 15-1 18-8 3-7 5-13 12-16z" fill="url(#furG)" stroke="#161717" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M120 82c14 2 24 12 25 26-8 2-15-1-18-8-3-7-5-13-12-16z" fill="url(#furG)" stroke="#161717" stroke-width="2.6" stroke-linejoin="round"/>
+  <!-- paws -->
+  <ellipse cx="55" cy="110" rx="11" ry="9" fill="url(#furG)" stroke="#161717" stroke-width="2.4"/>
+  <ellipse cx="143" cy="110" rx="11" ry="9" fill="url(#furG)" stroke="#161717" stroke-width="2.4"/>
+  <path d="M48 107l-2-4M55 105.5l0-4.5M62 107l2-4" stroke="#241d13" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M136 107l2-4M143 105.5l0-4.5M150 107l-2-4" stroke="#241d13" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- head -->
+  <ellipse cx="99" cy="60" rx="35" ry="31" fill="url(#headG)" stroke="#161717" stroke-width="3"/>
+
+  <!-- ears -->
+  <ellipse cx="70" cy="30" rx="12" ry="13" fill="url(#furG)" stroke="#161717" stroke-width="2.3"/>
+  <ellipse cx="128" cy="30" rx="12" ry="13" fill="url(#furG)" stroke="#161717" stroke-width="2.3"/>
+  <ellipse cx="70" cy="32" rx="6.4" ry="7" fill="#2a2117"/>
+  <ellipse cx="128" cy="32" rx="6.4" ry="7" fill="#2a2117"/>
+
+  <!-- mask -->
+  <path d="M67 46c8-11 20-16 32-16s24 5 32 16c-4 11-17 18-32 18s-28-7-32-18z" fill="#2c2416"/>
+
+  <!-- eyes -->
+  <ellipse cx="84" cy="49" rx="7.5" ry="9" fill="#fbf6e8"/>
+  <ellipse cx="114" cy="49" rx="7.5" ry="9" fill="#fbf6e8"/>
+  <circle cx="86" cy="51" r="4.8" fill="#181410"/>
+  <circle cx="112" cy="51" r="4.8" fill="#181410"/>
+  <circle cx="88" cy="48.5" r="1.7" fill="#fff"/>
+  <circle cx="114" cy="48.5" r="1.7" fill="#fff"/>
+
+  <!-- snout -->
+  <ellipse cx="99" cy="70" rx="15" ry="11.5" fill="#f0e6c9" stroke="#161717" stroke-width="2"/>
+  <ellipse cx="99" cy="65.5" rx="4.4" ry="3.6" fill="#241c13"/>
+  <path d="M99 69v3.5" stroke="#241c13" stroke-width="1.4"/>
+  <path d="M84 73c4.5 6.5 23 6.5 27.5 0" stroke="#241c13" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+  <!-- whiskers -->
+  <path d="M66 67l-13-2M66 73l-14 3M132 67l13-2M132 73l14 3" stroke="#f3ead2" stroke-width="1.3" stroke-linecap="round" opacity="0.85"/>
+</svg>
+      <div class="wordmark">
+        <span class="trash-word">TRASH</span><span class="or-word">— OR —</span><span class="cash-word">CASH</span>
+      </div>
+    </div>
+    <button class="gear-btn" id="settingsBtn" aria-label="Settings">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </button>
+  </header>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="spark">SPARK</div>
+    <div class="tab" data-tab="instacart">INSTACART</div>
+    <div class="tab" data-tab="food">FOOD DELIVERY</div>
+  </div>
+
+  <!-- ============ SPARK ============ -->
+  <div class="platform-panel" id="panel-spark">
+    <div class="required-block">
+      <div class="field-group">
+        <div class="field-label"><span>Stops</span><span class="req">required</span></div>
+        <input class="field-input" type="number" inputmode="numeric" id="spark-stops" placeholder="e.g. 8">
+      </div>
+      <div class="field-group">
+        <div class="field-label"><span>Estimated time (min)</span><span class="req">required</span></div>
+        <input class="field-input" type="number" inputmode="numeric" id="spark-time" placeholder="e.g. 45">
+      </div>
+      <div class="field-group">
+        <div class="field-label"><span>Route miles</span><span class="req">required</span></div>
+        <input class="field-input" type="number" inputmode="decimal" id="spark-miles" placeholder="e.g. 22">
+        <div class="field-hint">The actual driving distance for this order — store to all stops.</div>
+      </div>
+      <div class="field-group" style="margin-bottom:0;">
+        <div class="field-label"><span>Offer amount ($)</span><span class="req">required</span></div>
+        <input class="field-input" type="number" inputmode="decimal" id="spark-offer" placeholder="e.g. 24.50">
+      </div>
+    </div>
+
+    <button class="more-toggle" data-more="spark"><span>+ MORE DETAILS (OPTIONAL)</span><span class="chev">▾</span></button>
+    <div class="more-panel" id="more-spark">
+      <div class="field-group">
+        <div class="field-label"><span>Items (shop &amp; deliver)</span></div>
+        <input class="field-input" type="number" inputmode="numeric" id="spark-items" placeholder="leave blank for multi-stop">
+        <div class="field-hint">For logging only — doesn't change the math, since offer and time already capture the payout.</div>
+      </div>
+      <div class="field-group">
+        <div class="field-label"><span>Return miles to store</span></div>
+        <input class="field-input" type="number" inputmode="decimal" id="spark-return" placeholder="leave blank to skip">
+        <div class="field-hint">The trip back after your last stop, if you're heading straight back. Only counted if you enter it.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ INSTACART ============ -->
+  <div class="platform-panel" id="panel-instacart" style="display:none;">
+    <div class="required-block">
+      <div class="field-group">
+        <div class="field-label"><span>Items</span><span class="req">required</span></div>
+        <input class="field-input" type="number" inputmode="numeric" id="ic-items" placeholder="e.g. 32">
+      </div>
+      <div class="field-group">
+        <div class="field-label"><span>Delivery miles</span><span class="req">required</span></div>
+        <input class="field-input" type="number" inputmode="decimal" id="ic-miles" placeholder="e.g. 5.2">
+      </div>
+      <div class="field-group" style="margin-bottom:0;">
+        <div class="field-label"><span>Offer amount ($)</span><span class="req">required</span></div>
+        <input class="field-input" type="number" inputmode="decimal" id="ic-offer" placeholder="e.g. 41.00">
+      </div>
+    </div>
+    <div class="field-hint" style="margin:-6px 0 14px 4px;" id="ic-time-preview">Instacart doesn't show a time estimate, so time is estimated from item count.</div>
+
+    <button class="more-toggle" data-more="instacart"><span>+ MORE DETAILS (OPTIONAL)</span><span class="chev">▾</span></button>
+    <div class="more-panel" id="more-instacart">
+      <div class="field-group">
+        <div class="field-label"><span>Your shopping speed (sec/item)</span></div>
+        <input class="field-input" type="number" inputmode="decimal" id="ic-speed" placeholder="default: 150">
+        <div class="field-hint">Leave blank to use the generic default. Know your own pace? Enter it.</div>
+      </div>
+      <div class="field-group" style="margin-bottom:0;">
+        <div class="field-label"><span>Avg. driving speed (mph)</span></div>
+        <input class="field-input" type="number" inputmode="decimal" id="ic-mph" placeholder="default: 40">
+        <div class="field-hint">Used to turn delivery miles into drive time. Leave blank to use the generic default.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FOOD DELIVERY ============ -->
+  <div class="platform-panel" id="panel-food" style="display:none;">
+    <div class="required-block">
+      <div class="field-group">
+        <div class="field-label"><span>Estimated time (min)</span><span class="req">required</span></div>
+        <input class="field-input" type="number" inputmode="numeric" id="fd-time" placeholder="e.g. 22">
+      </div>
+      <div class="field-group">
+        <div class="field-label"><span>Miles</span><span class="req">required</span></div>
+        <input class="field-input" type="number" inputmode="decimal" id="fd-miles" placeholder="e.g. 6.4">
+      </div>
+      <div class="field-group" style="margin-bottom:0;">
+        <div class="field-label"><span>Offer amount ($)</span><span class="req">required</span></div>
+        <input class="field-input" type="number" inputmode="decimal" id="fd-offer" placeholder="e.g. 9.75">
+      </div>
+    </div>
+  </div>
+
+  <div class="waiting-note" id="waitingNote">Fill in the required fields above — this updates as you go.</div>
+
+  <div class="result" id="result">
+    <div class="verdict-card" id="verdictCard">
+      <div class="verdict-word" id="verdictWord">CASH</div>
+      <div class="verdict-sub" id="verdictSub">$27.40/hr net — above your $25 target</div>
+      <div class="tilt-wrap">
+        <div class="tilt-track">
+          <div class="tilt-marker"></div>
+          <div class="tilt-fill" id="tiltFill"></div>
+        </div>
+        <div class="tilt-labels"><span>TRASH</span><span>TARGET</span><span>CASH</span></div>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-label">Net $/hr</div><div class="stat-value" id="statNet">—</div></div>
+      <div class="stat-box"><div class="stat-label">Gross $/hr</div><div class="stat-value" id="statGross">—</div></div>
+      <div class="stat-box"><div class="stat-label">Fuel cost</div><div class="stat-value" id="statFuel">—</div></div>
+      <div class="stat-box"><div class="stat-label">Time used</div><div class="stat-value" id="statTime">—</div></div>
+    </div>
+    <div class="breakeven-note" id="breakevenNote"></div>
+  </div>
+
+  <div class="footer-note">Nothing here is assumed unless you enter it — except Instacart's default shopping speed, which you can override anytime in More Details.</div>
+</div>
+
+<!-- ============ SETTINGS MODAL ============ -->
+<div class="modal-backdrop" id="settingsModal">
+  <div class="modal">
+    <h2>Your numbers</h2>
+    <div class="modal-sub">This is the only setup step. Everything else in the app stays generic.</div>
+
+    <div class="field-group">
+      <div class="field-label"><span>Your $/hr target</span></div>
+      <div class="slider-row">
+        <input type="range" id="setThreshold" min="10" max="60" step="1" value="25">
+        <div class="slider-value" id="setThresholdVal">$25</div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field-label"><span>Your vehicle's MPG</span></div>
+      <input class="field-input" type="number" inputmode="decimal" id="setMpg" placeholder="e.g. 25" style="font-size:17px; padding:12px 14px;">
+    </div>
+
+    <div class="field-group">
+      <div class="field-label"><span>Gas price ($/gallon)</span></div>
+      <input class="field-input" type="number" inputmode="decimal" id="setGas" placeholder="e.g. 3.50" style="font-size:17px; padding:12px 14px;">
+      <div class="derived-rate" id="derivedRate">= $0.140 / mile</div>
+    </div>
+
+    <button class="modal-save" id="saveSettings">SAVE</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const DEFAULTS = { threshold:25, mpg:25, gas:3.50 };
+  const CONSTANTS = { icSpeed:150, icMph:40 }; // generic fallbacks — never persisted, always current
+  let settings = loadSettings();
+
+  function loadSettings(){
+    try{
+      const raw = localStorage.getItem('toc_settings');
+      if(raw){
+        const stored = JSON.parse(raw);
+        // Only pull the three user-editable keys. Ignore any legacy icSpeed/icMph
+        // from older saves so code updates to those defaults always take effect.
+        return {
+          threshold: typeof stored.threshold === 'number' ? stored.threshold : DEFAULTS.threshold,
+          mpg: typeof stored.mpg === 'number' ? stored.mpg : DEFAULTS.mpg,
+          gas: typeof stored.gas === 'number' ? stored.gas : DEFAULTS.gas
+        };
+      }
+    }catch(e){}
+    return Object.assign({}, DEFAULTS);
+  }
+  function saveSettings(){
+    try{ localStorage.setItem('toc_settings', JSON.stringify({threshold:settings.threshold, mpg:settings.mpg, gas:settings.gas})); }catch(e){}
+  }
+  function costPerMile(){ return settings.gas / settings.mpg; }
+
+  // ---------- Field persistence ----------
+  const FIELD_IDS = ['spark-stops','spark-time','spark-miles','spark-offer','spark-return','spark-items',
+    'ic-items','ic-offer','ic-speed','ic-miles','ic-mph','fd-time','fd-miles','fd-offer'];
+
+  function loadFields(){
+    try{
+      const raw = localStorage.getItem('toc_fields');
+      if(!raw) return;
+      const data = JSON.parse(raw);
+      FIELD_IDS.forEach(id=>{
+        const el = document.getElementById(id);
+        if(el && data[id] !== undefined && data[id] !== '') el.value = data[id];
+      });
+    }catch(e){}
+  }
+  function saveFields(){
+    try{
+      const data = {};
+      FIELD_IDS.forEach(id=>{
+        const el = document.getElementById(id);
+        if(el) data[id] = el.value;
+      });
+      localStorage.setItem('toc_fields', JSON.stringify(data));
+    }catch(e){}
+  }
+  let lastTab = 'spark';
+  try{ lastTab = localStorage.getItem('toc_last_tab') || 'spark'; }catch(e){}
+
+  // ---------- Tabs ----------
+  const tabs = document.querySelectorAll('.tab');
+  const panels = { spark:'panel-spark', instacart:'panel-instacart', food:'panel-food' };
+  function activateTab(name){
+    tabs.forEach(t=> t.classList.toggle('active', t.dataset.tab === name));
+    Object.keys(panels).forEach(k=>{
+      document.getElementById(panels[k]).style.display = (k===name) ? 'block' : 'none';
+    });
+    lastTab = name;
+    try{ localStorage.setItem('toc_last_tab', name); }catch(e){}
+  }
+  tabs.forEach(t=> t.addEventListener('click', ()=>{ activateTab(t.dataset.tab); runCheck(); }));
+
+  // ---------- More details toggles ----------
+  document.querySelectorAll('.more-toggle').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const key = btn.dataset.more;
+      const panel = document.getElementById('more-'+key);
+      const open = panel.classList.toggle('open');
+      btn.classList.toggle('open', open);
+      btn.querySelector('span').textContent = open ? '– MORE DETAILS (OPTIONAL)' : '+ MORE DETAILS (OPTIONAL)';
+    });
+  });
+
+  // ---------- Settings modal ----------
+  const modal = document.getElementById('settingsModal');
+  document.getElementById('settingsBtn').addEventListener('click', ()=>{
+    document.getElementById('setThreshold').value = settings.threshold;
+    document.getElementById('setThresholdVal').textContent = '$'+settings.threshold;
+    document.getElementById('setMpg').value = settings.mpg;
+    document.getElementById('setGas').value = settings.gas;
+    updateDerivedRate();
+    modal.classList.add('show');
+  });
+  document.getElementById('setThreshold').addEventListener('input', (e)=>{
+    document.getElementById('setThresholdVal').textContent = '$'+e.target.value;
+  });
+  function updateDerivedRate(){
+    const mpg = parseFloat(document.getElementById('setMpg').value) || DEFAULTS.mpg;
+    const gas = parseFloat(document.getElementById('setGas').value) || DEFAULTS.gas;
+    document.getElementById('derivedRate').textContent = '= $'+(gas/mpg).toFixed(3)+' / mile';
+  }
+  document.getElementById('setMpg').addEventListener('input', updateDerivedRate);
+  document.getElementById('setGas').addEventListener('input', updateDerivedRate);
+
+  document.getElementById('saveSettings').addEventListener('click', ()=>{
+    settings.threshold = parseFloat(document.getElementById('setThreshold').value) || DEFAULTS.threshold;
+    settings.mpg = parseFloat(document.getElementById('setMpg').value) || DEFAULTS.mpg;
+    settings.gas = parseFloat(document.getElementById('setGas').value) || DEFAULTS.gas;
+    saveSettings();
+    modal.classList.remove('show');
+    runCheck();
+  });
+
+  // First run: show settings automatically
+  let hasSettings = false;
+  try{ hasSettings = !!localStorage.getItem('toc_settings'); }catch(e){}
+  if(!hasSettings){
+    document.getElementById('settingsBtn').click();
+  }
+
+  // ---------- Calculation ----------
+  function num(id){ const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; }
+
+  function calcSpark(){
+    const stops = num('spark-stops'), time = num('spark-time'), miles = num('spark-miles'), offer = num('spark-offer');
+    if(stops===null || time===null || miles===null || offer===null || time<=0) return null;
+    const returnMiles = num('spark-return') || 0;
+    const fuel = (miles + returnMiles) * costPerMile();
+    const hrs = time/60;
+    return { gross: offer/hrs, net:(offer-fuel)/hrs, fuel, hrs, offer };
+  }
+
+  function calcInstacart(){
+    const items = num('ic-items'), offer = num('ic-offer'), miles = num('ic-miles');
+    if(items===null || offer===null || miles===null) return null;
+    const speed = num('ic-speed') || CONSTANTS.icSpeed; // seconds per item
+    const shopTime = (items * speed) / 60; // minutes
+    const mph = num('ic-mph') || CONSTANTS.icMph;
+    const driveTime = mph>0 ? (miles / mph) * 60 : 0; // minutes
+    const time = shopTime + driveTime;
+    if(time<=0) return null;
+    const fuel = miles * costPerMile();
+    const hrs = time/60;
+    return { gross: offer/hrs, net:(offer-fuel)/hrs, fuel, hrs, offer, shopTime, driveTime };
+  }
+
+  function calcFood(){
+    const time = num('fd-time'), miles = num('fd-miles'), offer = num('fd-offer');
+    if(time===null || miles===null || offer===null || time<=0) return null;
+    const fuel = miles * costPerMile();
+    const hrs = time/60;
+    return { gross: offer/hrs, net:(offer-fuel)/hrs, fuel, hrs, offer };
+  }
+
+  function currentCalc(){
+    const active = document.querySelector('.tab.active').dataset.tab;
+    if(active==='spark') return calcSpark();
+    if(active==='instacart') return calcInstacart();
+    return calcFood();
+  }
+
+  function fmtMoney(v){ return '$'+v.toFixed(2); }
+  function fmtHr(v){ return '$'+v.toFixed(2)+'/hr'; }
+
+  function runCheck(){
+    const r = currentCalc();
+    const resultEl = document.getElementById('result');
+    const waitingEl = document.getElementById('waitingNote');
+    if(!r){
+      resultEl.classList.remove('show');
+      waitingEl.classList.remove('hidden');
+      return;
+    }
+    waitingEl.classList.add('hidden');
+    const card = document.getElementById('verdictCard');
+    const word = document.getElementById('verdictWord');
+    const sub = document.getElementById('verdictSub');
+    const isCash = r.net >= settings.threshold;
+    card.className = 'verdict-card ' + (isCash ? 'cash' : 'trash');
+    word.textContent = isCash ? 'CASH' : 'TRASH';
+    const diff = Math.abs(r.net - settings.threshold);
+    sub.textContent = fmtHr(r.net) + ' net — ' + (isCash ? 'above' : 'below') + ' your $'+settings.threshold+' target by '+fmtMoney(diff)+'/hr';
+
+    // tilt bar: map net vs threshold to a -50%..+50% fill from center
+    const range = 20; // dollars of spread mapped to full bar
+    let pct = ((r.net - settings.threshold) / range) * 50;
+    pct = Math.max(-50, Math.min(50, pct));
+    const fill = document.getElementById('tiltFill');
+    if(pct >= 0){
+      fill.style.left = '50%';
+      fill.style.width = pct+'%';
+      fill.style.background = 'var(--cash)';
+    } else {
+      fill.style.left = (50+pct)+'%';
+      fill.style.width = (-pct)+'%';
+      fill.style.background = 'var(--trash)';
+    }
+
+    document.getElementById('statNet').textContent = fmtHr(r.net);
+    document.getElementById('statGross').textContent = fmtHr(r.gross);
+    document.getElementById('statFuel').textContent = r.fuel>0 ? fmtMoney(r.fuel) : '— not entered';
+    document.getElementById('statTime').textContent = (r.hrs*60).toFixed(0)+' min';
+
+    const breakeven = document.getElementById('breakevenNote');
+    if(!isCash){
+      const needed = settings.threshold * r.hrs + r.fuel;
+      breakeven.textContent = "You'd need "+fmtMoney(needed)+" to clear your target on this one.";
+    } else {
+      const cushion = r.offer - (settings.threshold * r.hrs + r.fuel);
+      breakeven.textContent = "You're "+fmtMoney(cushion)+" above what you'd need to hit target.";
+    }
+
+    resultEl.classList.add('show');
+    saveFields();
+  }
+
+  // "Check It" button removed — everything recalculates live as fields change.
+
+  // Save fields as user types (fixes the old persistence bug) AND live-recalculate
+  FIELD_IDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', ()=>{ saveFields(); runCheck(); });
+  });
+
+  // Instacart time preview
+  function updateIcPreview(){
+    const items = num('ic-items');
+    const miles = num('ic-miles');
+    const speed = num('ic-speed') || CONSTANTS.icSpeed; // seconds per item
+    const mph = num('ic-mph') || CONSTANTS.icMph;
+    const preview = document.getElementById('ic-time-preview');
+    if(items){
+      const shopMin = (items*speed)/60;
+      const driveMin = miles ? (miles/mph)*60 : 0;
+      const totalMin = Math.round(shopMin + driveMin);
+      if(miles){
+        preview.textContent = 'Estimated time: '+totalMin+' min ('+Math.round(shopMin)+' shopping at '+speed+' sec/item + '+Math.round(driveMin)+' driving at '+mph+' mph — edit in More Details)';
+      } else {
+        preview.textContent = 'Estimated time: '+totalMin+' min shopping (at '+speed+' sec/item). Add delivery miles above to include drive time.';
+      }
+    } else {
+      preview.textContent = "Instacart doesn't show a time estimate, so time is estimated from item count and delivery miles.";
+    }
+  }
+  document.getElementById('ic-items').addEventListener('input', updateIcPreview);
+  document.getElementById('ic-speed').addEventListener('input', updateIcPreview);
+  document.getElementById('ic-miles').addEventListener('input', updateIcPreview);
+  document.getElementById('ic-mph').addEventListener('input', updateIcPreview);
+
+  // ---------- Init ----------
+  loadFields();
+  activateTab(lastTab);
+  updateIcPreview();
+  runCheck();
+})();
+</script>
+</body>
+</html>

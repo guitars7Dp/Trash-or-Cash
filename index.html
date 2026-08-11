@@ -22,6 +22,24 @@
     --caution: #FFD23F;
   }
 
+  /* Light theme values below are kept as a CSS-level fallback; the JS theme
+     toggle applies these same colors directly as inline custom properties,
+     which takes precedence and is what actually drives the live toggle. */
+  html[data-theme="light"]{
+    --bg: #F5F2E9;
+    --panel: #FFFFFF;
+    --panel-2: #ECE7D8;
+    --line: #D9D3C0;
+    --line-bright: #B8B096;
+    --text: #201D16;
+    --muted: #3A362A;
+    --cash: #1E8F4C;
+    --cash-dim: #DCF3E4;
+    --trash: #D8471E;
+    --trash-dim: #FCE2D6;
+    --caution: #B8790A;
+  }
+
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 
   html,body{
@@ -37,6 +55,7 @@
 
   /* ---------- Header / Logo ---------- */
   header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+  .header-btns{ display:flex; align-items:center; gap:8px; }
   .brand{ display:flex; align-items:center; gap:10px; }
   .brand-icon{ width:52px; height:52px; flex:0 0 auto; }
   .wordmark{ font-family:'Archivo Black', sans-serif; font-size:21px; line-height:1; letter-spacing:-0.01em; }
@@ -75,7 +94,7 @@
     font-size:22px; font-weight:600; outline:none;
   }
   .field-input:focus{ border-color:var(--caution); }
-  .field-input::placeholder{ color:#5c5c56; font-weight:500; }
+  .field-input::placeholder{ color:var(--muted); font-weight:500; opacity:0.75; }
   .field-hint{ font-size:12px; color:var(--muted); margin-top:5px; }
 
   .required-block{
@@ -99,11 +118,14 @@
 
   /* ---------- Waiting note (shown until required fields are filled) ---------- */
   .waiting-note{
-    text-align:center; font-family:'IBM Plex Mono',monospace; font-size:12.5px;
-    color:var(--muted); padding:18px 10px; border:1px dashed var(--line-bright);
-    border-radius:14px; margin:6px 0 20px;
+    text-align:center; padding:18px 10px 16px;
+    border:1px dashed var(--line-bright); border-radius:14px; margin:6px 0 20px;
   }
   .waiting-note.hidden{ display:none; }
+  .waiting-note svg{ width:160px; height:auto; margin-bottom:8px; }
+  .waiting-note .waiting-txt{
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--muted);
+  }
 
   /* ---------- Result ---------- */
   .result{ display:none; }
@@ -173,7 +195,7 @@
   }
   .derived-rate{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--caution); margin-top:6px; }
 
-  .footer-note{ text-align:center; font-size:11px; color:var(--muted); margin-top:22px; line-height:1.5; }
+
 </style>
 </head>
 <body>
@@ -336,9 +358,15 @@
         <span class="trash-word">TRASH</span><span class="or-word">— OR —</span><span class="cash-word">CASH</span>
       </div>
     </div>
-    <button class="gear-btn" id="settingsBtn" aria-label="Settings">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-    </button>
+    <div class="header-btns">
+      <button class="gear-btn" id="themeBtn" aria-label="Toggle light/dark mode">
+        <svg id="themeIconSun" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
+        <svg id="themeIconMoon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+      <button class="gear-btn" id="settingsBtn" aria-label="Settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      </button>
+    </div>
   </header>
 
   <div class="tabs" id="tabs">
@@ -371,12 +399,7 @@
 
     <button class="more-toggle" data-more="spark"><span>+ MORE DETAILS (OPTIONAL)</span><span class="chev">▾</span></button>
     <div class="more-panel" id="more-spark">
-      <div class="field-group">
-        <div class="field-label"><span>Items (shop &amp; deliver)</span></div>
-        <input class="field-input" type="number" inputmode="numeric" id="spark-items" placeholder="leave blank for multi-stop">
-        <div class="field-hint">For logging only — doesn't change the math, since offer and time already capture the payout.</div>
-      </div>
-      <div class="field-group">
+      <div class="field-group" style="margin-bottom:0;">
         <div class="field-label"><span>Return miles to store</span></div>
         <input class="field-input" type="number" inputmode="decimal" id="spark-return" placeholder="leave blank to skip">
         <div class="field-hint">The trip back after your last stop, if you're heading straight back. Only counted if you enter it.</div>
@@ -435,7 +458,120 @@
     </div>
   </div>
 
-  <div class="waiting-note" id="waitingNote">Fill in the required fields above — this updates as you go.</div>
+  <div class="waiting-note" id="waitingNote">
+<svg viewBox="0 0 210 160" fill="none">
+    <defs>
+      <linearGradient id="canGD3" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#9aa0a3"/>
+        <stop offset="50%" stop-color="#d4d9db"/>
+        <stop offset="100%" stop-color="#787e81"/>
+      </linearGradient>
+      <linearGradient id="lidGD3" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#c7cccb"/>
+        <stop offset="100%" stop-color="#868c8a"/>
+      </linearGradient>
+      <linearGradient id="furGD3" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#8a734f"/>
+        <stop offset="100%" stop-color="#5e4c33"/>
+      </linearGradient>
+      <linearGradient id="headGD3" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#dfcda6"/>
+        <stop offset="100%" stop-color="#b49a70"/>
+      </linearGradient>
+      <linearGradient id="paperGD3" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#e8e3d4"/>
+        <stop offset="100%" stop-color="#b9b3a0"/>
+      </linearGradient>
+    </defs>
+
+    <ellipse cx="60" cy="123" rx="42" ry="6.5" fill="#000" opacity="0.28"/>
+    <ellipse cx="140" cy="120" rx="35" ry="6" fill="#000" opacity="0.28"/>
+
+    <!-- CAN — wider diameter, ribs running parallel to the tube's length -->
+    <g>
+      <ellipse cx="28" cy="90" rx="8" ry="32" fill="url(#canGD3)" stroke="#161717" stroke-width="3.2"/>
+      <rect x="28" y="58" width="66" height="64" fill="url(#canGD3)" stroke="#161717" stroke-width="3.2"/>
+
+      <!-- ribs: horizontal lines running the length of the can, stacked top to bottom -->
+      <g stroke="#3a3d3c" stroke-width="2.2" opacity="0.5">
+        <path d="M34 65h58"/><path d="M34 78h58"/><path d="M34 90h58"/><path d="M34 102h58"/><path d="M34 115h58"/>
+      </g>
+      <g stroke="#fff" stroke-width="1.2" opacity="0.4">
+        <path d="M34 71h58"/><path d="M34 84h58"/><path d="M34 96h58"/><path d="M34 108h58"/>
+      </g>
+
+      <!-- open rim, facing Rocco -->
+      <ellipse cx="96" cy="90" rx="10" ry="33" fill="#b3b8b6" stroke="#161717" stroke-width="3.2"/>
+      <ellipse cx="99" cy="90" rx="7" ry="27" fill="#1c1d1b"/>
+      <g fill="#eef1ee">
+        <circle cx="96.5" cy="60" r="2"/><circle cx="102" cy="72" r="2"/><circle cx="102" cy="90" r="2"/>
+        <circle cx="102" cy="108" r="2"/><circle cx="96.5" cy="120" r="2"/>
+      </g>
+    </g>
+
+    <!-- LID — fallen off, resting behind the can -->
+    <g transform="translate(22 130) rotate(-6)">
+      <ellipse cx="0" cy="0" rx="22" ry="9" fill="url(#lidGD3)" stroke="#161717" stroke-width="2.6"/>
+      <ellipse cx="0" cy="0" rx="16" ry="6.2" fill="none" stroke="#6f7573" stroke-width="1.5"/>
+      <ellipse cx="0" cy="0" rx="9.5" ry="3.6" fill="none" stroke="#6f7573" stroke-width="1.5"/>
+      <ellipse cx="0" cy="0" rx="5" ry="1.9" fill="#565a59" stroke="#161717" stroke-width="1.5"/>
+    </g>
+
+    <!-- crumpled paper scraps near the empty opening -->
+    <path d="M105 74c3-3 8-2 9 2s-2 6-5 6-7-5-4-8z" fill="url(#paperGD3)" stroke="#8a8470" stroke-width="1.2"/>
+    <path d="M101 104c-2-3 1-7 5-6s5 5 2 8-6 1-7-2z" fill="url(#paperGD3)" stroke="#8a8470" stroke-width="1.2"/>
+    <path d="M108 90c2-2 6-1 6 2s-3 4-5 3-3-3-1-5z" fill="url(#paperGD3)" stroke="#8a8470" stroke-width="1"/>
+
+    <!-- ROCCO — crouched to the right, facing left toward the can -->
+    <g>
+      <!-- tail, curled up behind him to the right -->
+      <path d="M170 105c12 4 20-6 17-17-2-6-7-9-12-8" fill="none" stroke="url(#furGD3)" stroke-width="14" stroke-linecap="round"/>
+      <path d="M170 105c12 4 20-6 17-17-2-6-7-9-12-8" fill="none" stroke="#241d13" stroke-width="14" stroke-linecap="round" stroke-dasharray="4 8" opacity="0.5"/>
+
+      <!-- haunches -->
+      <ellipse cx="153" cy="102" rx="21" ry="16" fill="url(#furGD3)"/>
+
+      <!-- body leaning left toward the can -->
+      <ellipse cx="130" cy="90" rx="23" ry="18" fill="url(#furGD3)"/>
+
+      <!-- reaching arm, extended left toward the can opening -->
+      <path d="M111 88c-6-2-11 0-13 5-2 4 0 8 4 9 3 1 6-1 8-4 2-3 3-7 1-10z" fill="url(#furGD3)" stroke="#161717" stroke-width="2.3" stroke-linejoin="round"/>
+      <ellipse cx="105" cy="95" rx="7.3" ry="6.2" fill="url(#furGD3)" stroke="#161717" stroke-width="1.9"/>
+      <!-- resting back paw -->
+      <ellipse cx="140" cy="113" rx="7.8" ry="6.2" fill="url(#furGD3)" stroke="#161717" stroke-width="1.9"/>
+
+      <!-- head, turned left toward the can, curious -->
+      <ellipse cx="127" cy="66" rx="25" ry="22" fill="url(#headGD3)" stroke="#161717" stroke-width="2.7"/>
+
+      <!-- ears -->
+      <ellipse cx="110" cy="46" rx="8.8" ry="9.3" fill="url(#furGD3)" stroke="#161717" stroke-width="2.1"/>
+      <ellipse cx="142" cy="46" rx="8.8" ry="9.3" fill="url(#furGD3)" stroke="#161717" stroke-width="2.1"/>
+      <ellipse cx="110" cy="47" rx="4.6" ry="5" fill="#2a2117"/>
+      <ellipse cx="142" cy="47" rx="4.6" ry="5" fill="#2a2117"/>
+
+      <!-- mask -->
+      <path d="M108 58c5-8 14-11 19-11s14 3 19 11c-3 8-13 12-19 12s-15-4-19-12z" fill="#2c2416"/>
+
+      <!-- eyes, looking left/curious -->
+      <ellipse cx="116" cy="60" rx="5.6" ry="6.6" fill="#fbf6e8"/>
+      <ellipse cx="135" cy="60" rx="5.6" ry="6.6" fill="#fbf6e8"/>
+      <circle cx="114" cy="61.5" r="3.5" fill="#181410"/>
+      <circle cx="133" cy="61.5" r="3.5" fill="#181410"/>
+      <circle cx="113" cy="60" r="1.2" fill="#fff"/>
+      <circle cx="132" cy="60" r="1.2" fill="#fff"/>
+
+      <!-- snout, pointed toward the can -->
+      <ellipse cx="114" cy="72" rx="10.4" ry="8.3" fill="#f0e6c9" stroke="#161717" stroke-width="1.9"/>
+      <ellipse cx="111" cy="69.5" rx="2.9" ry="2.4" fill="#241c13"/>
+      <path d="M107 73.5c3 3 9 3 12 0" stroke="#241c13" stroke-width="1.7" stroke-linecap="round" fill="none"/>
+
+      <!-- whiskers, pointing toward the can -->
+      <path d="M103 70l-10-2M103 74l-11 2" stroke="#f3ead2" stroke-width="1.1" stroke-linecap="round" opacity="0.85"/>
+      <path d="M144 68l9-2M144 73l10 1" stroke="#f3ead2" stroke-width="1.1" stroke-linecap="round" opacity="0.85"/>
+    </g>
+  </svg>
+    <div class="waiting-txt">Nothing to dig through yet — fill in the numbers above.</div>
+  </div>
 
   <div class="result" id="result">
     <div class="verdict-card" id="verdictCard">
@@ -459,7 +595,6 @@
     <div class="breakeven-note" id="breakevenNote"></div>
   </div>
 
-  <div class="footer-note">Nothing here is assumed unless you enter it — except Instacart's default shopping speed, which you can override anytime in More Details.</div>
 </div>
 
 <!-- ============ SETTINGS MODAL ============ -->
@@ -493,6 +628,53 @@
 
 <script>
 (function(){
+  // ---------- Theme (light/dark) ----------
+  // Colors are applied as inline custom properties directly via JS rather than
+  // relying on an html[data-theme] CSS selector cascade, since some constrained
+  // preview/webview contexts (link previews, quick-look style renderers) don't
+  // reliably re-apply attribute-selector rules even though they do run JS.
+  const THEMES = {
+    dark: {
+      bg:'#131313', panel:'#1C1C1C', panel2:'#232323', line:'#383838', lineBright:'#4a4a4a',
+      text:'#F4F1EA', muted:'#9C9C94', cash:'#3ECF6E', cashDim:'#163821',
+      trash:'#FF5A36', trashDim:'#3D1D14', caution:'#FFD23F'
+    },
+    light: {
+      bg:'#F5F2E9', panel:'#FFFFFF', panel2:'#ECE7D8', line:'#D9D3C0', lineBright:'#B8B096',
+      text:'#201D16', muted:'#3A362A', cash:'#1E8F4C', cashDim:'#DCF3E4',
+      trash:'#D8471E', trashDim:'#FCE2D6', caution:'#B8790A'
+    }
+  };
+  const VAR_MAP = {
+    bg:'--bg', panel:'--panel', panel2:'--panel-2', line:'--line', lineBright:'--line-bright',
+    text:'--text', muted:'--muted', cash:'--cash', cashDim:'--cash-dim',
+    trash:'--trash', trashDim:'--trash-dim', caution:'--caution'
+  };
+  function loadTheme(){
+    try{ return localStorage.getItem('toc_theme') || 'dark'; }catch(e){ return 'dark'; }
+  }
+  function applyTheme(theme){
+    const colors = THEMES[theme] || THEMES.dark;
+    const root = document.documentElement.style;
+    Object.keys(VAR_MAP).forEach(key=>{
+      root.setProperty(VAR_MAP[key], colors[key]);
+    });
+    document.documentElement.setAttribute('data-theme', theme);
+    const sun = document.getElementById('themeIconSun');
+    const moon = document.getElementById('themeIconMoon');
+    if(sun && moon){
+      sun.style.display = theme === 'light' ? 'none' : 'block';
+      moon.style.display = theme === 'light' ? 'block' : 'none';
+    }
+  }
+  let currentTheme = loadTheme();
+  applyTheme(currentTheme);
+  document.getElementById('themeBtn').addEventListener('click', ()=>{
+    currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+    applyTheme(currentTheme);
+    try{ localStorage.setItem('toc_theme', currentTheme); }catch(e){}
+  });
+
   const DEFAULTS = { threshold:25, mpg:25, gas:3.50 };
   const CONSTANTS = { icSpeed:150, icMph:40 }; // generic fallbacks — never persisted, always current
   let settings = loadSettings();
@@ -519,7 +701,7 @@
   function costPerMile(){ return settings.gas / settings.mpg; }
 
   // ---------- Field persistence ----------
-  const FIELD_IDS = ['spark-stops','spark-time','spark-miles','spark-offer','spark-return','spark-items',
+  const FIELD_IDS = ['spark-stops','spark-time','spark-miles','spark-offer','spark-return',
     'ic-items','ic-offer','ic-speed','ic-miles','ic-mph','fd-time','fd-miles','fd-offer'];
 
   function loadFields(){
@@ -728,7 +910,7 @@
         preview.textContent = 'Estimated time: '+totalMin+' min shopping (at '+speed+' sec/item). Add delivery miles above to include drive time.';
       }
     } else {
-      preview.textContent = "Instacart doesn't show a time estimate, so time is estimated from item count and delivery miles.";
+      preview.textContent = "Instacart doesn't show a time estimate, so time is estimated from item count and delivery miles. Know your shopping speed? Update it under More Details.";
     }
   }
   document.getElementById('ic-items').addEventListener('input', updateIcPreview);

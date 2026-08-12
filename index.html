@@ -1099,22 +1099,39 @@
     return out;
   }
 
+  // Fields cleared before every voice/dictated capture per tab. Every field
+  // here is per-order, not a standing setting — so a stale number from a
+  // previous order should never silently mix with a new, possibly partial
+  // capture (see applyVoiceResult). ic-speed and ic-mph are deliberately
+  // excluded — those are closer to a standing preference (your shopping
+  // pace / driving speed) and are meant to persist across orders.
+  const TAB_ORDER_FIELDS = {
+    spark: ['spark-stops', 'spark-time', 'spark-miles', 'spark-offer', 'spark-return'],
+    instacart: ['ic-items', 'ic-miles', 'ic-offer'],
+    food: ['fd-time', 'fd-miles', 'fd-offer']
+  };
+
   function applyVoiceResult(parsed, tab){
     const setVal = (id, val)=>{
       if(val===undefined || val===null) return;
       const el = document.getElementById(id);
       if(el) el.value = val;
     };
+    // Clear every per-order field for this tab first. A speech session that
+    // gets cut short (iOS often ends on the first brief pause) previously
+    // left old values sitting in place, which combined with a partial
+    // capture to silently produce a wrong, premature verdict. Blank fields
+    // instead mean currentCalc() correctly shows nothing yet rather than a
+    // confident wrong answer.
+    (TAB_ORDER_FIELDS[tab] || []).forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.value = '';
+    });
     if(tab==='spark'){
       setVal('spark-stops', parsed.stops);
       setVal('spark-time', parsed.time);
       setVal('spark-miles', parsed.miles);
       setVal('spark-offer', parsed.offer);
-      // Return miles is a per-order value, not a standing setting like MPG —
-      // clear it first each time so a stale number from a previous voice
-      // capture never silently carries into this order's fuel cost. It's
-      // set right back below if this utterance actually mentions it.
-      document.getElementById('spark-return').value = '';
       setVal('spark-return', parsed.returnMiles);
     } else if(tab==='instacart'){
       setVal('ic-items', parsed.items);

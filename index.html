@@ -1267,9 +1267,15 @@
   // iOS Safari requires an <audio> element's first play() to happen inside a
   // real user gesture, or later async playback (after the mic's onresult
   // fires) gets silently blocked. This primes both clips — play immediately
-  // followed by pause — the instant the mic is tapped, unlocking them for
-  // the rest of the session.
+  // followed by pause — once, ever, on the first mic tap. It deliberately
+  // does NOT run on every tap: repeatedly grabbing the audio *playback*
+  // session right before handing off to the microphone's *recording*
+  // session on every single tap is the likely cause of recognition getting
+  // progressively flakier the more the mic was used in one sitting.
+  let audioPrimed = false;
   function primeAudio(){
+    if(audioPrimed) return;
+    audioPrimed = true;
     [cashAudioEl || (cashAudioEl = new Audio(CASH_SFX_SRC)),
      trashAudioEl || (trashAudioEl = new Audio(TRASH_SFX_SRC))].forEach(el=>{
       try{

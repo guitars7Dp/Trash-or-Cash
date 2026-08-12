@@ -1173,6 +1173,12 @@
   // second .start() on the same object often silently does nothing, which is
   // why the mic worked once and then needed the app to be reopened. Building
   // a fresh instance on every tap avoids that entirely.
+  // Tracks whichever recognizer instance is currently mid-session, so a
+  // second tap can cleanly cancel it instead of a new session stacking on
+  // top of one iOS hasn't fully torn down yet — that overlap is what caused
+  // "listening... does nothing... then cancelled" on the third tap.
+  let activeRecognizer = null;
+
   function createRecognizer(){
     if(!SpeechRec) return null;
     const r = new SpeechRec();
@@ -1197,7 +1203,10 @@
       };
       voiceStatus.textContent = reasons[e.error] || ("Error: " + e.error + " — try again or type below.");
     };
-    r.onend = ()=>{ voiceBtn.classList.remove('listening'); };
+    r.onend = ()=>{
+      voiceBtn.classList.remove('listening');
+      if(activeRecognizer === r) activeRecognizer = null;
+    };
     return r;
   }
 
@@ -1222,14 +1231,24 @@
 
   voiceBtn.addEventListener('click', ()=>{
     primeAudio();
+    if(activeRecognizer){
+      // A session is already in flight — cancel it cleanly rather than
+      // starting a second one on top of it.
+      try{ activeRecognizer.abort(); }catch(e){}
+      activeRecognizer = null;
+      voiceBtn.classList.remove('listening');
+      voiceStatus.textContent = 'Cancelled — tap to try again.';
+      return;
+    }
     const recognizer = createRecognizer();
     if(!recognizer){
       voiceFallbackInput.focus();
       return;
     }
+    activeRecognizer = recognizer;
     voiceBtn.classList.add('listening');
     voiceStatus.textContent = 'Listening…';
-    try{ recognizer.start(); }catch(e){ voiceBtn.classList.remove('listening'); }
+    try{ recognizer.start(); }catch(e){ activeRecognizer = null; voiceBtn.classList.remove('listening'); }
   });
 
   voiceFallbackInput.addEventListener('keydown', (e)=>{

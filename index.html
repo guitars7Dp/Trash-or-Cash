@@ -1111,18 +1111,61 @@
 
   // Speaks the current verdict aloud — only called after voice/dictated entry,
   // never on manual typing, so normal use doesn't get narrated on every keystroke.
+  const ROCCO_CASH_LINES = [
+    "Woohoo! That there is verified gold!",
+    "Yeehaw! That's cash money right there!",
+    "Now THAT'S a keeper, partner!",
+    "Ka-ching! Load it up!"
+  ];
+  const ROCCO_TRASH_LINES = [
+    "Aww, no go on that one.",
+    "Toss it in the trash, partner.",
+    "That one's trash, plain and simple.",
+    "Nah, let that one roll on by."
+  ];
   function speakVerdict(){
-    if(!('speechSynthesis' in window)) return;
     const r = currentCalc();
     if(!r) return;
+    const isCash = r.net >= settings.threshold;
+    playBanjoSting(isCash);
+    if(!('speechSynthesis' in window)) return;
     try{
-      const isCash = r.net >= settings.threshold;
-      const utter = new SpeechSynthesisUtterance(
-        (isCash ? 'Cash.' : 'Trash.') + ' ' + r.net.toFixed(2) + ' dollars an hour net.'
-      );
-      utter.rate = 1.05;
+      const lines = isCash ? ROCCO_CASH_LINES : ROCCO_TRASH_LINES;
+      const line = lines[Math.floor(Math.random() * lines.length)];
+      const utter = new SpeechSynthesisUtterance(line);
+      // Pitch/rate tweaks are the only "character" knobs the free Web Speech
+      // API exposes — no custom Rocco voice without a paid TTS service.
+      utter.pitch = isCash ? 1.35 : 0.75;
+      utter.rate = 1.08;
       window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utter);
+      // Small delay so the banjo sting isn't talked over immediately.
+      setTimeout(()=>{ window.speechSynthesis.speak(utter); }, 350);
+    }catch(e){}
+  }
+
+  // Synthesized banjo-style pluck sting (Web Audio oscillators, no audio file
+  // needed). A quick ascending run for cash, a descending "womp" for trash.
+  function playBanjoSting(isCash){
+    if(!audioCtx) return;
+    try{
+      const now = audioCtx.currentTime;
+      const cashNotes = [261.63, 329.63, 392.00, 523.25];   // C4 E4 G4 C5
+      const trashNotes = [392.00, 349.23, 293.66, 246.94];  // G4 F4 D4 B3
+      const notes = isCash ? cashNotes : trashNotes;
+      notes.forEach((freq, i)=>{
+        const t0 = now + i*0.12;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, t0);
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(0.18, t0 + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.25);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t0);
+        osc.stop(t0 + 0.3);
+      });
     }catch(e){}
   }
 
@@ -1175,24 +1218,31 @@
     voiceStatus.textContent = "Tap the mic on your keyboard below, or type it in.";
   }
 
-  // iOS Safari requires speechSynthesis to be triggered directly by a user
-  // gesture at least once per session before it'll play audio from anything
-  // that fires later via an async callback (like the mic's onresult). This
-  // primes it silently the instant the mic button is tapped.
+  // iOS Safari requires speechSynthesis AND the Web Audio API to be unlocked
+  // by a direct user gesture at least once per session before either will
+  // play from something that fires later via an async callback (like the
+  // mic's onresult). This primes both silently the instant the mic is tapped.
   let speechPrimed = false;
-  function primeSpeech(){
-    if(speechPrimed || !('speechSynthesis' in window)) return;
-    try{
-      const unlock = new SpeechSynthesisUtterance(' ');
-      unlock.volume = 0.01;
-      unlock.rate = 10;
-      window.speechSynthesis.speak(unlock);
-      speechPrimed = true;
-    }catch(e){}
+  let audioCtx = null;
+  function primeAudio(){
+    if(!speechPrimed && 'speechSynthesis' in window){
+      try{
+        const unlock = new SpeechSynthesisUtterance(' ');
+        unlock.volume = 0.01;
+        unlock.rate = 10;
+        window.speechSynthesis.speak(unlock);
+        speechPrimed = true;
+      }catch(e){}
+    }
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if(AudioCtx){
+      if(!audioCtx){ try{ audioCtx = new AudioCtx(); }catch(e){} }
+      if(audioCtx && audioCtx.state === 'suspended'){ audioCtx.resume(); }
+    }
   }
 
   voiceBtn.addEventListener('click', ()=>{
-    primeSpeech();
+    primeAudio();
     if(!recognizer){
       voiceFallbackInput.focus();
       return;
@@ -1204,7 +1254,7 @@
 
   voiceFallbackInput.addEventListener('keydown', (e)=>{
     if(e.key !== 'Enter') return;
-    primeSpeech();
+    primeAudio();
     const activeTab = document.querySelector('.tab.active').dataset.tab;
     const parsed = parseVoiceText(voiceFallbackInput.value);
     applyVoiceResult(parsed, activeTab);

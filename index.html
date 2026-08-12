@@ -1185,12 +1185,23 @@
     r.lang = 'en-US';
     r.interimResults = false;
     r.maxAlternatives = 1;
+    // Don't rely on onend to reset state — on iOS Safari it frequently never
+    // fires after a result comes back, which was leaving the session stuck
+    // "active" forever and silently blocking every tap after the first.
+    // Reset immediately in onresult/onerror instead, and treat onend as a
+    // bonus cleanup rather than the only cleanup.
+    const finish = ()=>{
+      voiceBtn.classList.remove('listening');
+      if(activeRecognizer === r) activeRecognizer = null;
+      try{ r.stop(); }catch(e){}
+    };
     r.onresult = (e)=>{
       const transcript = e.results[0][0].transcript;
       const activeTab = document.querySelector('.tab.active').dataset.tab;
       const parsed = parseVoiceText(transcript);
       applyVoiceResult(parsed, activeTab);
       voiceStatus.textContent = summarizeParsed(parsed);
+      finish();
     };
     r.onerror = (e)=>{
       const reasons = {
@@ -1202,11 +1213,9 @@
         'aborted': 'Cancelled.'
       };
       voiceStatus.textContent = reasons[e.error] || ("Error: " + e.error + " — try again or type below.");
+      finish();
     };
-    r.onend = ()=>{
-      voiceBtn.classList.remove('listening');
-      if(activeRecognizer === r) activeRecognizer = null;
-    };
+    r.onend = finish;
     return r;
   }
 
@@ -1249,6 +1258,18 @@
     voiceBtn.classList.add('listening');
     voiceStatus.textContent = 'Listening…';
     try{ recognizer.start(); }catch(e){ activeRecognizer = null; voiceBtn.classList.remove('listening'); }
+
+    // Safety net: if none of onresult/onerror/onend ever fire (seen on iOS
+    // Safari), force it closed after 10s so the mic can never lock up for
+    // the rest of the session.
+    setTimeout(()=>{
+      if(activeRecognizer === recognizer){
+        try{ recognizer.abort(); }catch(e){}
+        activeRecognizer = null;
+        voiceBtn.classList.remove('listening');
+        voiceStatus.textContent = "Timed out — tap to try again.";
+      }
+    }, 10000);
   });
 
   voiceFallbackInput.addEventListener('keydown', (e)=>{

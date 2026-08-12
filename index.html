@@ -1161,20 +1161,32 @@
   const voiceFallback = document.getElementById('voiceFallback');
   const voiceFallbackInput = document.getElementById('voiceFallbackInput');
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let recognizer = null;
-  if(SpeechRec){
-    recognizer = new SpeechRec();
-    recognizer.lang = 'en-US';
-    recognizer.interimResults = false;
-    recognizer.maxAlternatives = 1;
-    recognizer.onresult = (e)=>{
+  if(!SpeechRec){
+    // No SpeechRecognition support in this browser: fall back to a text box
+    // the person can either type into or dictate into via their keyboard's
+    // own mic key, which works regardless of browser API support.
+    voiceFallback.classList.add('show');
+    voiceStatus.textContent = "Tap the mic on your keyboard below, or type it in.";
+  }
+
+  // iOS Safari SpeechRecognition instances are effectively single-use — a
+  // second .start() on the same object often silently does nothing, which is
+  // why the mic worked once and then needed the app to be reopened. Building
+  // a fresh instance on every tap avoids that entirely.
+  function createRecognizer(){
+    if(!SpeechRec) return null;
+    const r = new SpeechRec();
+    r.lang = 'en-US';
+    r.interimResults = false;
+    r.maxAlternatives = 1;
+    r.onresult = (e)=>{
       const transcript = e.results[0][0].transcript;
       const activeTab = document.querySelector('.tab.active').dataset.tab;
       const parsed = parseVoiceText(transcript);
       applyVoiceResult(parsed, activeTab);
       voiceStatus.textContent = summarizeParsed(parsed);
     };
-    recognizer.onerror = (e)=>{
+    r.onerror = (e)=>{
       const reasons = {
         'not-allowed': 'Microphone access is blocked — check Settings > Safari > Microphone for this site.',
         'service-not-allowed': "iOS speech recognition service isn't available — check Settings > General > Keyboard > Enable Dictation is ON.",
@@ -1185,13 +1197,8 @@
       };
       voiceStatus.textContent = reasons[e.error] || ("Error: " + e.error + " — try again or type below.");
     };
-    recognizer.onend = ()=>{ voiceBtn.classList.remove('listening'); };
-  } else {
-    // No SpeechRecognition support in this browser: fall back to a text box
-    // the person can either type into or dictate into via their keyboard's
-    // own mic key, which works regardless of browser API support.
-    voiceFallback.classList.add('show');
-    voiceStatus.textContent = "Tap the mic on your keyboard below, or type it in.";
+    r.onend = ()=>{ voiceBtn.classList.remove('listening'); };
+    return r;
   }
 
   // iOS Safari requires an <audio> element's first play() to happen inside a
@@ -1215,6 +1222,7 @@
 
   voiceBtn.addEventListener('click', ()=>{
     primeAudio();
+    const recognizer = createRecognizer();
     if(!recognizer){
       voiceFallbackInput.focus();
       return;

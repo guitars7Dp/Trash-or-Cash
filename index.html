@@ -1093,6 +1093,11 @@
       setVal('spark-time', parsed.time);
       setVal('spark-miles', parsed.miles);
       setVal('spark-offer', parsed.offer);
+      // Return miles is a per-order value, not a standing setting like MPG —
+      // clear it first each time so a stale number from a previous voice
+      // capture never silently carries into this order's fuel cost. It's
+      // set right back below if this utterance actually mentions it.
+      document.getElementById('spark-return').value = '';
       setVal('spark-return', parsed.returnMiles);
     } else if(tab==='instacart'){
       setVal('ic-items', parsed.items);
@@ -1198,7 +1203,12 @@
     [cashAudioEl || (cashAudioEl = new Audio(CASH_SFX_SRC)),
      trashAudioEl || (trashAudioEl = new Audio(TRASH_SFX_SRC))].forEach(el=>{
       try{
-        el.play().then(()=>{ el.pause(); el.currentTime = 0; }).catch(()=>{});
+        el.muted = true; // silent unlock blip — this is what was audibly firing before
+        el.play().then(()=>{
+          el.pause();
+          el.currentTime = 0;
+          el.muted = false;
+        }).catch(()=>{ el.muted = false; });
       }catch(e){}
     });
   }

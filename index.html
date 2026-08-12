@@ -1175,7 +1175,24 @@
     voiceStatus.textContent = "Tap the mic on your keyboard below, or type it in.";
   }
 
+  // iOS Safari requires speechSynthesis to be triggered directly by a user
+  // gesture at least once per session before it'll play audio from anything
+  // that fires later via an async callback (like the mic's onresult). This
+  // primes it silently the instant the mic button is tapped.
+  let speechPrimed = false;
+  function primeSpeech(){
+    if(speechPrimed || !('speechSynthesis' in window)) return;
+    try{
+      const unlock = new SpeechSynthesisUtterance(' ');
+      unlock.volume = 0.01;
+      unlock.rate = 10;
+      window.speechSynthesis.speak(unlock);
+      speechPrimed = true;
+    }catch(e){}
+  }
+
   voiceBtn.addEventListener('click', ()=>{
+    primeSpeech();
     if(!recognizer){
       voiceFallbackInput.focus();
       return;
@@ -1187,6 +1204,7 @@
 
   voiceFallbackInput.addEventListener('keydown', (e)=>{
     if(e.key !== 'Enter') return;
+    primeSpeech();
     const activeTab = document.querySelector('.tab.active').dataset.tab;
     const parsed = parseVoiceText(voiceFallbackInput.value);
     applyVoiceResult(parsed, activeTab);

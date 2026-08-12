@@ -106,42 +106,26 @@
     opacity:0; background:var(--cash);
   }
 
-  .voice-bar{
-    display:flex; align-items:center; gap:10px; margin-bottom:16px;
-    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:10px 12px;
+  .voice-entry{
+    margin-bottom:16px; background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; padding:14px;
   }
-  .voice-btn{
-    flex-shrink:0; width:44px; height:44px; border-radius:50%; border:1.5px solid var(--line-bright);
-    background:var(--panel-2); color:var(--text); display:flex; align-items:center; justify-content:center;
-    cursor:pointer; transition:background .15s ease, border-color .15s ease;
-  }
-  .voice-btn:active{ background:var(--panel); }
-  .voice-btn.listening{
-    background:var(--trash); border-color:var(--trash); color:#fff;
-    animation:voicePulse 1s ease-in-out infinite;
-  }
-  @keyframes voicePulse{
-    0%{ box-shadow:0 0 0 0 rgba(255,90,54,0.45); }
-    70%{ box-shadow:0 0 0 12px rgba(255,90,54,0); }
-    100%{ box-shadow:0 0 0 0 rgba(255,90,54,0); }
-  }
-  .voice-text{ flex:1; min-width:0; }
-  .voice-title{
+  .voice-entry-title{
     font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.06em;
-    text-transform:uppercase; color:var(--muted); margin-bottom:2px;
+    text-transform:uppercase; color:var(--muted); margin-bottom:8px;
+    display:flex; align-items:center; gap:6px;
   }
+  .voice-entry input{
+    width:100%; padding:16px 14px; border-radius:12px; border:1.5px solid var(--line-bright);
+    background:var(--panel); color:var(--text); font-family:'IBM Plex Mono',monospace;
+    font-size:16px; outline:none; margin-bottom:6px;
+  }
+  .voice-entry input:focus{ border-color:var(--caution); }
+  .voice-entry .field-hint{ margin-top:0; }
   .voice-status{
     font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--text);
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    margin-top:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
-  .voice-fallback{ display:none; margin-top:10px; }
-  .voice-fallback.show{ display:block; }
-  .voice-fallback input{
-    width:100%; padding:12px 14px; border-radius:10px; border:1.5px solid var(--line-bright);
-    background:var(--panel); color:var(--text); font-family:'IBM Plex Mono',monospace;
-    font-size:14px; outline:none; margin-bottom:6px;
-  }
-  .voice-fallback .field-hint{ margin-top:0; }
 
   /* ---------- Field blocks ---------- */
   .field-group{ margin-bottom:14px; }
@@ -446,18 +430,14 @@
   </div>
 
   <!-- ============ VOICE CAPTURE ============ -->
-  <div class="voice-bar">
-    <button class="voice-btn" id="voiceBtn" aria-label="Speak your offer details" type="button">
-      <svg id="voiceIconMic" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-    </button>
-    <div class="voice-text">
-      <div class="voice-title">Quick voice entry</div>
-      <div class="voice-status" id="voiceStatus">Tap and say it in one go — "4 stops, 12 minutes, 3 miles, 24 dollars"</div>
+  <div class="voice-entry">
+    <div class="voice-entry-title">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+      Quick voice entry
     </div>
-  </div>
-  <div class="voice-fallback" id="voiceFallback">
     <input type="text" id="voiceFallbackInput" placeholder='e.g. "4 stops, 12 minutes, 3 miles, 24 dollars"' autocomplete="off">
-    <div class="field-hint">Voice recognition isn't available in this browser — type it here, or tap the mic icon on your keyboard to dictate into this box, then hit Enter.</div>
+    <div class="field-hint">Tap here, then tap the mic on your keyboard and say it all in one go — or just type it.</div>
+    <div class="voice-status" id="voiceStatus"></div>
   </div>
 
   <!-- ============ SPARK ============ -->
@@ -1236,77 +1216,13 @@
     return parts.length ? 'Got it — ' + parts.join(', ') : "Didn't catch any numbers — try again or type below.";
   }
 
-  const voiceBtn = document.getElementById('voiceBtn');
   const voiceStatus = document.getElementById('voiceStatus');
-  const voiceFallback = document.getElementById('voiceFallback');
   const voiceFallbackInput = document.getElementById('voiceFallbackInput');
-  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SpeechRec){
-    // No SpeechRecognition support in this browser: fall back to a text box
-    // the person can either type into or dictate into via their keyboard's
-    // own mic key, which works regardless of browser API support.
-    voiceFallback.classList.add('show');
-    voiceStatus.textContent = "Tap the mic on your keyboard below, or type it in.";
-  }
-
-  // iOS Safari SpeechRecognition instances are effectively single-use — a
-  // second .start() on the same object often silently does nothing, which is
-  // why the mic worked once and then needed the app to be reopened. Building
-  // a fresh instance on every tap avoids that entirely.
-  // Tracks whichever recognizer instance is currently mid-session, so a
-  // second tap can cleanly cancel it instead of a new session stacking on
-  // top of one iOS hasn't fully torn down yet — that overlap is what caused
-  // "listening... does nothing... then cancelled" on the third tap.
-  let activeRecognizer = null;
-
-  function createRecognizer(){
-    if(!SpeechRec) return null;
-    const r = new SpeechRec();
-    r.lang = 'en-US';
-    r.interimResults = false;
-    r.maxAlternatives = 1;
-    // Don't rely on onend to reset state — on iOS Safari it frequently never
-    // fires after a result comes back, which was leaving the session stuck
-    // "active" forever and silently blocking every tap after the first.
-    // Reset immediately in onresult/onerror instead, and treat onend as a
-    // bonus cleanup rather than the only cleanup.
-    const finish = ()=>{
-      voiceBtn.classList.remove('listening');
-      if(activeRecognizer === r) activeRecognizer = null;
-      try{ r.stop(); }catch(e){}
-    };
-    r.onresult = (e)=>{
-      const transcript = e.results[0][0].transcript;
-      const activeTab = document.querySelector('.tab.active').dataset.tab;
-      const parsed = parseVoiceText(transcript);
-      applyVoiceResult(parsed, activeTab);
-      voiceStatus.textContent = summarizeParsed(parsed);
-      finish();
-    };
-    r.onerror = (e)=>{
-      const reasons = {
-        'not-allowed': 'Microphone access is blocked — check Settings > Safari > Microphone for this site.',
-        'service-not-allowed': "iOS speech recognition service isn't available — check Settings > General > Keyboard > Enable Dictation is ON.",
-        'no-speech': "Didn't hear anything — tap the mic and speak right away.",
-        'audio-capture': 'No microphone found — check nothing else is using it.',
-        'network': 'Needs an internet connection to recognize speech — check your signal.',
-        'aborted': 'Cancelled.'
-      };
-      voiceStatus.textContent = reasons[e.error] || ("Error: " + e.error + " — try again or type below.");
-      finish();
-    };
-    r.onend = finish;
-    return r;
-  }
 
   // iOS Safari requires an <audio> element's first play() to happen inside a
-  // real user gesture, or later async playback (after the mic's onresult
-  // fires) gets silently blocked. This primes both clips — play immediately
-  // followed by pause — once, ever, on the first mic tap. It deliberately
-  // does NOT run on every tap: repeatedly grabbing the audio *playback*
-  // session right before handing off to the microphone's *recording*
-  // session on every single tap is the likely cause of recognition getting
-  // progressively flakier the more the mic was used in one sitting.
+  // real user gesture, or later playback gets silently blocked. This primes
+  // both clips — play immediately followed by pause — once, ever, on first
+  // interaction with the voice entry box.
   let audioPrimed = false;
   function primeAudio(){
     if(audioPrimed) return;
@@ -1314,7 +1230,7 @@
     [cashAudioEl || (cashAudioEl = new Audio(CASH_SFX_SRC)),
      trashAudioEl || (trashAudioEl = new Audio(TRASH_SFX_SRC))].forEach(el=>{
       try{
-        el.muted = true; // silent unlock blip — this is what was audibly firing before
+        el.muted = true; // silent unlock blip
         el.play().then(()=>{
           el.pause();
           el.currentTime = 0;
@@ -1323,40 +1239,7 @@
       }catch(e){}
     });
   }
-
-  voiceBtn.addEventListener('click', ()=>{
-    primeAudio();
-    if(activeRecognizer){
-      // A session is already in flight — cancel it cleanly rather than
-      // starting a second one on top of it.
-      try{ activeRecognizer.abort(); }catch(e){}
-      activeRecognizer = null;
-      voiceBtn.classList.remove('listening');
-      voiceStatus.textContent = 'Cancelled — tap to try again.';
-      return;
-    }
-    const recognizer = createRecognizer();
-    if(!recognizer){
-      voiceFallbackInput.focus();
-      return;
-    }
-    activeRecognizer = recognizer;
-    voiceBtn.classList.add('listening');
-    voiceStatus.textContent = 'Listening…';
-    try{ recognizer.start(); }catch(e){ activeRecognizer = null; voiceBtn.classList.remove('listening'); }
-
-    // Safety net: if none of onresult/onerror/onend ever fire (seen on iOS
-    // Safari), force it closed after 10s so the mic can never lock up for
-    // the rest of the session.
-    setTimeout(()=>{
-      if(activeRecognizer === recognizer){
-        try{ recognizer.abort(); }catch(e){}
-        activeRecognizer = null;
-        voiceBtn.classList.remove('listening');
-        voiceStatus.textContent = "Timed out — tap to try again.";
-      }
-    }, 10000);
-  });
+  voiceFallbackInput.addEventListener('focus', primeAudio);
 
   voiceFallbackInput.addEventListener('keydown', (e)=>{
     if(e.key !== 'Enter') return;

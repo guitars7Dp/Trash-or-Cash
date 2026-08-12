@@ -1048,11 +1048,44 @@
 
   // ---------- Voice capture ----------
   // Parses a single freeform utterance (no back-and-forth) into field values by
-  // keyword, so it fits inside a 30-45 second offer timer. Digits are expected
-  // to already be numerals — iOS/Android dictation converts spoken numbers to
-  // numerals before this ever sees the text.
+  // keyword, so it fits inside a 30-45 second offer timer.
+  // NOTE: iOS/Android dictation reliably renders numbers as digits when they
+  // look like currency or decimals ("24 dollars", "3.2 miles"), but small
+  // counting numbers like a stop count are often left as words instead
+  // ("four" rather than "4") — this was silently breaking just the stops
+  // field while dollar/mile/time fields kept working fine. wordsToDigits
+  // below converts spelled-out numbers (including two-word forms like
+  // "forty five") to digits before parsing.
+  const NUMBER_WORDS = {
+    zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10,
+    eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16, seventeen:17,
+    eighteen:18, nineteen:19
+  };
+  const TENS_WORDS = { twenty:20, thirty:30, forty:40, fifty:50, sixty:60, seventy:70, eighty:80, ninety:90 };
+  function wordsToDigits(text){
+    // Two-word forms first ("forty five" -> "45"), so the ones-word doesn't
+    // get converted on its own and misread as a separate, wrong number.
+    let out = text.replace(
+      /\b(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)\s+(one|two|three|four|five|six|seven|eight|nine)\b/g,
+      (m, tens, ones)=> String(TENS_WORDS[tens] + NUMBER_WORDS[ones])
+    );
+    out = out.replace(/\b([a-z]+)\b/g, (match, word)=>{
+      if(NUMBER_WORDS.hasOwnProperty(word)) return String(NUMBER_WORDS[word]);
+      if(TENS_WORDS.hasOwnProperty(word)) return String(TENS_WORDS[word]);
+      return match;
+    });
+    // "3 point 2" -> "3.2" (miles are often spoken as decimals, and this has
+    // to run after the word->digit conversion above, since "two" needs to
+    // already be "2" for this to catch it). Handles multi-digit fractional
+    // parts spoken digit-by-digit too, e.g. "twelve point seven five" -> 12.75.
+    out = out.replace(/(\d+)\s+point\s+((?:\d\s*)+)/g, (m, whole, fracDigits)=>{
+      return whole + '.' + fracDigits.trim().split(/\s+/).join('');
+    });
+    return out;
+  }
+
   function parseVoiceText(text){
-    const t = (' ' + text.toLowerCase() + ' ').replace(/,/g, ' ');
+    const t = (' ' + wordsToDigits(text.toLowerCase()) + ' ').replace(/,/g, ' ');
     const out = {};
 
     const dollarMatch = t.match(/\$\s*(\d+(?:\.\d+)?)/) || t.match(/(\d+(?:\.\d+)?)\s*(?:dollars?|bucks?)/);

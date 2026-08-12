@@ -1053,21 +1053,32 @@
     const minMatch = t.match(/(\d+(?:\.\d+)?)\s*(?:minutes?|mins?)/);
     if(minMatch) out.time = parseFloat(minMatch[1]);
 
-    // Miles: collect every mention, then split out any tagged as "return".
+    // Return miles: look for an explicit "return"/"back" phrase attached to a
+    // mile number, either before or after the number, e.g. "return 3 miles",
+    // "3 miles return", "3 miles back to the store". This is checked FIRST and
+    // deterministically, rather than guessing by character proximity — that
+    // proximity-guess approach was the earlier bug: it missed common phrasings
+    // like "3 return miles" or when "return" trailed too far behind the number.
+    let returnMiles = null, returnSpan = null;
+    const returnPatterns = [
+      /(?:return|back)\D{0,15}?(\d+(?:\.\d+)?)\s*(?:miles?|mi\b)/,
+      /(\d+(?:\.\d+)?)\s*(?:miles?|mi\b)\D{0,15}?(?:return|back)/,
+      /(\d+(?:\.\d+)?)\s*(?:return|back)\s*(?:miles?|mi\b)/
+    ];
+    for(const pat of returnPatterns){
+      const rm = t.match(pat);
+      if(rm){ returnMiles = parseFloat(rm[1]); returnSpan = [rm.index, rm.index + rm[0].length]; break; }
+    }
+
+    // Route miles: every remaining mile mention not already consumed above.
     const mileRe = /(\d+(?:\.\d+)?)\s*(?:miles?|mi\b)/g;
     let mm, miles = [];
-    while((mm = mileRe.exec(t))){ miles.push({ value: parseFloat(mm[1]), index: mm.index }); }
-    if(miles.length){
-      const returnIdx = t.indexOf('return');
-      let regularMiles = null, returnMiles = null;
-      miles.forEach(mi=>{
-        if(returnIdx !== -1 && Math.abs(mi.index - returnIdx) < 20){ returnMiles = mi.value; }
-        else if(regularMiles===null){ regularMiles = mi.value; }
-      });
-      if(regularMiles===null) regularMiles = miles[0].value;
-      out.miles = regularMiles;
-      if(returnMiles!==null) out.returnMiles = returnMiles;
+    while((mm = mileRe.exec(t))){
+      if(returnSpan && mm.index >= returnSpan[0] && mm.index < returnSpan[1]) continue;
+      miles.push(parseFloat(mm[1]));
     }
+    if(miles.length) out.miles = miles[0];
+    if(returnMiles!==null) out.returnMiles = returnMiles;
     return out;
   }
 
@@ -1095,6 +1106,24 @@
     saveFields();
     updateIcPreview();
     runCheck();
+    speakVerdict();
+  }
+
+  // Speaks the current verdict aloud — only called after voice/dictated entry,
+  // never on manual typing, so normal use doesn't get narrated on every keystroke.
+  function speakVerdict(){
+    if(!('speechSynthesis' in window)) return;
+    const r = currentCalc();
+    if(!r) return;
+    try{
+      const isCash = r.net >= settings.threshold;
+      const utter = new SpeechSynthesisUtterance(
+        (isCash ? 'Cash.' : 'Trash.') + ' ' + r.net.toFixed(2) + ' dollars an hour net.'
+      );
+      utter.rate = 1.05;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utter);
+    }catch(e){}
   }
 
   function summarizeParsed(parsed){

@@ -1232,6 +1232,11 @@
         const result = e.results[e.results.length - 1];
         if(result.isFinal){
           applyVoiceEntry(result[0].transcript);
+          // Don't wait on iOS to release the mic on its own — we already
+          // have what we need, so shut it down immediately rather than
+          // trusting onend to fire promptly.
+          try{ recognition.abort(); }catch(e){}
+          resetMicButton();
         }
       };
       recognition.onerror = ()=>{ /* stay quiet — onend below resets the button either way */ };

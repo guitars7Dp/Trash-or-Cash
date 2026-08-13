@@ -784,7 +784,7 @@
   });
 
   const DEFAULTS = { threshold:25, mpg:25, gas:3.50 };
-  const CONSTANTS = { icSpeed:150, icMph:40 }; // generic fallbacks — never persisted, always current
+  const CONSTANTS = { icSpeed:150, icMph:40, sparkReturnMph:40 }; // generic fallbacks — never persisted, always current
   let settings = loadSettings();
 
   function loadSettings(){
@@ -921,7 +921,12 @@
     if(time===null || miles===null || offer===null || time<=0) return null;
     const returnMiles = num('spark-return') || 0;
     const fuel = (miles + returnMiles) * costPerMile();
-    const hrs = time/60;
+    // Spark's own time estimate only covers the delivery route itself — it has
+    // no idea where you're driving from or back to. Return miles pays for gas
+    // above, but it also costs real minutes that the offer's clock never counted,
+    // so we add that drive time here using an assumed average speed.
+    const returnHrs = returnMiles / CONSTANTS.sparkReturnMph;
+    const hrs = (time/60) + returnHrs;
     return { gross: offer/hrs, net:(offer-fuel)/hrs, fuel, hrs, offer };
   }
 

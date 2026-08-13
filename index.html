@@ -1050,6 +1050,37 @@
     const el = document.getElementById(id);
     if(el) el.value = match[1];
   }
+  function setVal(id, value){
+    const el = document.getElementById(id);
+    if(el && value !== undefined && value !== null) el.value = value;
+  }
+
+  // iOS Safari's own speech engine sometimes auto-formats a spoken dollar
+  // amount followed shortly by another number as a single currency value
+  // with cents (e.g. "forty five dollars, thirteen miles" arrives as
+  // "$45.13 miles" before our parsing ever sees it). The fingerprint of
+  // that corruption is specific: a decimal dollar match with "miles" (or
+  // "return miles") sitting directly against it — no digit, no gap. A
+  // genuine spoken cents amount never has that word bolted straight onto
+  // the decimal like that, so this recovers the split without risking a
+  // real cents value. Checked regardless of whether route miles was
+  // already found elsewhere, since it's the trailing "return miles" that's
+  // usually the one at risk of getting folded in when spoken last.
+  function recoverMilesFoldedIntoOffer(text, offerMatch){
+    if(!offerMatch) return null;
+    const decMatch = offerMatch[1].match(/^(\d+)\.(\d+)$/);
+    if(!decMatch) return null;
+    const afterIdx = text.indexOf(offerMatch[0]) + offerMatch[0].length;
+    const tail = text.slice(afterIdx);
+    const value = decMatch[2].replace(/^0+(?=\d)/, '');
+    if(/^\s*,?\s*return\s*(?:trip\s*)?miles?\b/.test(tail)){
+      return { offer: decMatch[1], value, kind: 'return' };
+    }
+    if(/^\s*,?\s*miles?\b/.test(tail)){
+      return { offer: decMatch[1], value, kind: 'miles' };
+    }
+    return null;
+  }
 
   function applyVoiceEntry(rawText){
     const t = wordsToDigits(rawText);
@@ -1060,19 +1091,47 @@
       setFieldFromMatch('spark-time', remaining.match(/(\d+(?:\.\d+)?)\s*(?:minutes|minute|mins|min)\b/));
       const returnM = remaining.match(/(\d+(?:\.\d+)?)\s*return\s*(?:trip\s*)?miles?\b/);
       if(returnM){ setFieldFromMatch('spark-return', returnM); remaining = remaining.replace(returnM[0], ' '); }
-      setFieldFromMatch('spark-miles', remaining.match(/(\d+(?:\.\d+)?)\s*miles?\b/));
-      setFieldFromMatch('spark-offer', t.match(/(\d+(?:\.\d+)?)\s*dollars?\b/));
+      const milesM = remaining.match(/(\d+(?:\.\d+)?)\s*miles?\b/);
+      const offerM = t.match(/(\d+(?:\.\d+)?)\s*dollars?\b/);
+      const recovered = recoverMilesFoldedIntoOffer(t, offerM);
+      if(recovered && recovered.kind === 'return' && !returnM){
+        setVal('spark-offer', recovered.offer);
+        setVal('spark-return', recovered.value);
+        setFieldFromMatch('spark-miles', milesM);
+      } else if(recovered && recovered.kind === 'miles' && !milesM){
+        setVal('spark-offer', recovered.offer);
+        setVal('spark-miles', recovered.value);
+      } else {
+        setFieldFromMatch('spark-miles', milesM);
+        setFieldFromMatch('spark-offer', offerM);
+      }
     } else if(active === 'instacart'){
       setFieldFromMatch('ic-items', remaining.match(/(\d+)\s*items?\b/));
-      setFieldFromMatch('ic-offer', remaining.match(/(\d+(?:\.\d+)?)\s*dollars?\b/));
       const mphM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:miles per hour|mph)\b/);
       if(mphM){ setFieldFromMatch('ic-mph', mphM); remaining = remaining.replace(mphM[0], ' '); }
       setFieldFromMatch('ic-speed', remaining.match(/(\d+(?:\.\d+)?)\s*(?:seconds per item|speed)\b/));
-      setFieldFromMatch('ic-miles', remaining.match(/(\d+(?:\.\d+)?)\s*miles?\b/));
+      const milesM = remaining.match(/(\d+(?:\.\d+)?)\s*miles?\b/);
+      const offerM = remaining.match(/(\d+(?:\.\d+)?)\s*dollars?\b/);
+      const recovered = recoverMilesFoldedIntoOffer(remaining, offerM);
+      if(recovered && recovered.kind === 'miles' && !milesM){
+        setVal('ic-offer', recovered.offer);
+        setVal('ic-miles', recovered.value);
+      } else {
+        setFieldFromMatch('ic-miles', milesM);
+        setFieldFromMatch('ic-offer', offerM);
+      }
     } else {
       setFieldFromMatch('fd-time', remaining.match(/(\d+(?:\.\d+)?)\s*(?:minutes|minute|mins|min)\b/));
-      setFieldFromMatch('fd-miles', remaining.match(/(\d+(?:\.\d+)?)\s*miles?\b/));
-      setFieldFromMatch('fd-offer', remaining.match(/(\d+(?:\.\d+)?)\s*dollars?\b/));
+      const milesM = remaining.match(/(\d+(?:\.\d+)?)\s*miles?\b/);
+      const offerM = remaining.match(/(\d+(?:\.\d+)?)\s*dollars?\b/);
+      const recovered = recoverMilesFoldedIntoOffer(remaining, offerM);
+      if(recovered && recovered.kind === 'miles' && !milesM){
+        setVal('fd-offer', recovered.offer);
+        setVal('fd-miles', recovered.value);
+      } else {
+        setFieldFromMatch('fd-miles', milesM);
+        setFieldFromMatch('fd-offer', offerM);
+      }
     }
 
     saveFields();

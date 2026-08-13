@@ -1179,30 +1179,74 @@
     micBtn.style.display = 'none';
   } else {
     let listening = false;
+    let activeRecognition = null;
+    let hardStopTimer = null;
+
+    function resetMicButton(){
+      listening = false;
+      activeRecognition = null;
+      clearTimeout(hardStopTimer);
+      micBtn.classList.remove('listening');
+      micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
+    }
+
     micBtn.addEventListener('click', ()=>{
-      if(listening) return;
+      if(listening){
+        // Second tap while listening = cancel immediately, don't wait on
+        // the timeout or silence detection — lets a mis-tap or mistake be
+        // restarted right away instead of stuck waiting.
+        try{ activeRecognition && activeRecognition.abort(); }catch(e){}
+        resetMicButton();
+        return;
+      }
       const recognition = new SpeechRec(); // fresh instance every tap, on purpose
       recognition.lang = 'en-US';
-      recognition.interimResults = false;
+      // Interim results turned on purely so the safety-net timer below can
+      // tell "still actively speaking" apart from "genuinely stuck" — only
+      // the final result is ever used to fill fields.
+      recognition.interimResults = true;
       recognition.maxAlternatives = 1;
       listening = true;
+      activeRecognition = recognition;
       micBtn.classList.add('listening');
       micBtn.querySelector('.mic-label').textContent = 'LISTENING…';
+
+      // Safety net: iOS Safari's SpeechRecognition doesn't always fire its
+      // own end event reliably, so a session could otherwise sit on the mic
+      // indefinitely and duck background audio while driving. This is NOT a
+      // cap on how long you have to speak — every interim result (i.e. any
+      // sign the recognizer is still actively hearing you) pushes the
+      // deadline back out. It only fires after 8 full seconds of genuine
+      // silence/dead air with nothing happening.
+      function armHardStop(){
+        clearTimeout(hardStopTimer);
+        hardStopTimer = setTimeout(()=>{
+          try{ recognition.abort(); }catch(e){}
+          resetMicButton();
+        }, 8000);
+      }
+      armHardStop();
+
       recognition.onresult = (e)=>{
-        const transcript = e.results[0][0].transcript;
-        applyVoiceEntry(transcript);
+        armHardStop(); // any result — interim or final — means it's alive; extend the deadline
+        const result = e.results[e.results.length - 1];
+        if(result.isFinal){
+          applyVoiceEntry(result[0].transcript);
+        }
       };
       recognition.onerror = ()=>{ /* stay quiet — onend below resets the button either way */ };
-      recognition.onend = ()=>{
-        listening = false;
-        micBtn.classList.remove('listening');
-        micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
-      };
+      recognition.onend = resetMicButton;
       try{ recognition.start(); }
-      catch(e){
-        listening = false;
-        micBtn.classList.remove('listening');
-        micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
+      catch(e){ resetMicButton(); }
+    });
+
+    // Extra safety net: if the tab/app gets backgrounded (e.g. switching
+    // apps, or the OS tearing the page down) while a session is active,
+    // kill it immediately rather than leaving it to iOS's own cleanup.
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.hidden && activeRecognition){
+        try{ activeRecognition.abort(); }catch(e){}
+        resetMicButton();
       }
     });
   }

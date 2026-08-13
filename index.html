@@ -84,7 +84,34 @@
   .gear-btn:active{ background:var(--panel-2); }
 
   /* ---------- Tabs ---------- */
-  .tabs{ display:flex; gap:8px; margin-bottom:18px; }
+  .tabs{ display:flex; gap:8px; margin-bottom:12px; }
+  .mic-btn{
+    display:flex; align-items:center; justify-content:center; gap:9px;
+    width:100%; padding:14px; border-radius:12px; border:1.5px solid var(--line);
+    background:var(--panel); color:var(--text); font-family:'Archivo Black',sans-serif;
+    font-size:13px; letter-spacing:0.03em; cursor:pointer; margin-bottom:14px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .mic-btn svg{ width:18px; height:18px; flex-shrink:0; }
+  .mic-btn.listening{ background:var(--caution); color:var(--bg); border-color:var(--caution); }
+  .action-row{ display:flex; gap:10px; margin-bottom:14px; }
+  .calc-btn{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+    padding:15px; border-radius:12px; border:none; background:var(--caution);
+    color:var(--bg); font-family:'Archivo Black',sans-serif; font-size:14px; letter-spacing:0.03em;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+  .calc-btn:active{ opacity:0.85; }
+  .calc-btn svg{ width:17px; height:17px; flex-shrink:0; }
+  .clear-row{ display:flex; }
+  .clear-btn{
+    display:flex; align-items:center; gap:6px; padding:10px 14px; border-radius:10px;
+    border:1.5px solid var(--line); background:var(--panel); color:var(--text);
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px; letter-spacing:0.05em;
+    -webkit-tap-highlight-color:transparent; cursor:pointer;
+  }
+  .clear-btn:active{ background:var(--panel-2); border-color:var(--caution); }
+  .clear-btn svg{ width:14px; height:14px; flex-shrink:0; }
   .tab{
     flex:1; text-align:center; padding:12px 6px; border-radius:10px;
     border:1.5px solid var(--line); background:var(--panel);
@@ -155,6 +182,13 @@
   .verdict-word{ font-family:'Archivo Black',sans-serif; font-size:44px; line-height:1; letter-spacing:-0.01em; }
   .verdict-card.cash .verdict-word{ color:var(--cash); }
   .verdict-card.trash .verdict-word{ color:var(--trash); }
+  .verdict-card.pulse{ animation:cardPulse 0.4s ease; }
+  @keyframes cardPulse{
+    0%{ transform:scale(1); }
+    45%{ transform:scale(1.035); }
+    100%{ transform:scale(1); }
+  }
+
 
   .verdict-sub{ font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text); opacity:0.85; margin-top:6px; }
 
@@ -387,6 +421,10 @@
     </div>
   </header>
 
+  <button class="mic-btn" id="micBtn" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+    <span class="mic-label">TAP TO SPEAK</span>
+  </button>
 
   <div class="tabs" id="tabs">
     <div class="tab active" data-tab="spark">SPARK</div>
@@ -394,25 +432,33 @@
     <div class="tab" data-tab="food">FOOD DELIVERY</div>
   </div>
 
+  <div class="action-row">
+    <button class="calc-btn" id="calculateBtn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="7" x2="16" y2="7"></line><line x1="8" y1="11" x2="8.01" y2="11"></line><line x1="12" y1="11" x2="12.01" y2="11"></line><line x1="16" y1="11" x2="16.01" y2="11"></line><line x1="8" y1="15" x2="8.01" y2="15"></line><line x1="12" y1="15" x2="12.01" y2="15"></line><line x1="16" y1="15" x2="16.01" y2="15"></line></svg>
+      CALCULATE
+    </button>
+    <div class="clear-row">
+      <button class="clear-btn" id="clearFieldsBtn" type="button" aria-label="Clear fields">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
+      </button>
+    </div>
+  </div>
+
   <!-- ============ SPARK ============ -->
   <div class="platform-panel" id="panel-spark">
     <div class="required-block">
-      <div class="field-group">
-        <div class="field-label"><span>Stops</span><span class="req">required</span></div>
-        <input class="field-input" type="number" inputmode="numeric" id="spark-stops" placeholder="e.g. 8">
-      </div>
       <div class="field-group">
         <div class="field-label"><span>Estimated time (min)</span><span class="req">required</span></div>
         <input class="field-input" type="number" inputmode="numeric" id="spark-time" placeholder="e.g. 45">
       </div>
       <div class="field-group">
         <div class="field-label"><span>Route miles</span><span class="req">required</span></div>
-        <input class="field-input" type="number" inputmode="decimal" id="spark-miles" placeholder="e.g. 22">
+        <input class="field-input" type="text" inputmode="decimal" id="spark-miles" placeholder="e.g. 22">
         <div class="field-hint">The actual driving distance for this order — store to all stops.</div>
       </div>
       <div class="field-group" style="margin-bottom:0;">
         <div class="field-label"><span>Offer amount ($)</span><span class="req">required</span></div>
-        <input class="field-input" type="number" inputmode="decimal" id="spark-offer" placeholder="e.g. 24.50">
+        <input class="field-input" type="text" inputmode="decimal" id="spark-offer" placeholder="e.g. 24.50">
       </div>
     </div>
 
@@ -420,7 +466,7 @@
     <div class="more-panel" id="more-spark">
       <div class="field-group" style="margin-bottom:0;">
         <div class="field-label"><span>Return miles to store</span></div>
-        <input class="field-input" type="number" inputmode="decimal" id="spark-return" placeholder="leave blank to skip">
+        <input class="field-input" type="text" inputmode="decimal" id="spark-return" placeholder="leave blank to skip">
         <div class="field-hint">The trip back after your last stop, if you're heading straight back. Only counted if you enter it.</div>
       </div>
     </div>
@@ -435,11 +481,11 @@
       </div>
       <div class="field-group">
         <div class="field-label"><span>Delivery miles</span><span class="req">required</span></div>
-        <input class="field-input" type="number" inputmode="decimal" id="ic-miles" placeholder="e.g. 5.2">
+        <input class="field-input" type="text" inputmode="decimal" id="ic-miles" placeholder="e.g. 5.2">
       </div>
       <div class="field-group" style="margin-bottom:0;">
         <div class="field-label"><span>Offer amount ($)</span><span class="req">required</span></div>
-        <input class="field-input" type="number" inputmode="decimal" id="ic-offer" placeholder="e.g. 41.00">
+        <input class="field-input" type="text" inputmode="decimal" id="ic-offer" placeholder="e.g. 41.00">
       </div>
     </div>
     <div class="field-hint" style="margin:-6px 0 14px 4px;" id="ic-time-preview">Instacart doesn't show a time estimate, so time is estimated from item count.</div>
@@ -448,12 +494,12 @@
     <div class="more-panel" id="more-instacart">
       <div class="field-group">
         <div class="field-label"><span>Your shopping speed (sec/item)</span></div>
-        <input class="field-input" type="number" inputmode="decimal" id="ic-speed" placeholder="default: 150">
+        <input class="field-input" type="text" inputmode="decimal" id="ic-speed" placeholder="default: 150">
         <div class="field-hint">Leave blank to use the generic default. Know your own pace? Enter it.</div>
       </div>
       <div class="field-group" style="margin-bottom:0;">
         <div class="field-label"><span>Avg. driving speed (mph)</span></div>
-        <input class="field-input" type="number" inputmode="decimal" id="ic-mph" placeholder="default: 40">
+        <input class="field-input" type="text" inputmode="decimal" id="ic-mph" placeholder="default: 40">
         <div class="field-hint">Used to turn delivery miles into drive time. Leave blank to use the generic default.</div>
       </div>
     </div>
@@ -468,11 +514,11 @@
       </div>
       <div class="field-group">
         <div class="field-label"><span>Miles</span><span class="req">required</span></div>
-        <input class="field-input" type="number" inputmode="decimal" id="fd-miles" placeholder="e.g. 6.4">
+        <input class="field-input" type="text" inputmode="decimal" id="fd-miles" placeholder="e.g. 6.4">
       </div>
       <div class="field-group" style="margin-bottom:0;">
         <div class="field-label"><span>Offer amount ($)</span><span class="req">required</span></div>
-        <input class="field-input" type="number" inputmode="decimal" id="fd-offer" placeholder="e.g. 9.75">
+        <input class="field-input" type="text" inputmode="decimal" id="fd-offer" placeholder="e.g. 9.75">
       </div>
     </div>
   </div>
@@ -675,12 +721,12 @@
 
     <div class="field-group">
       <div class="field-label"><span>Your vehicle's MPG</span></div>
-      <input class="field-input" type="number" inputmode="decimal" id="setMpg" placeholder="e.g. 25" style="font-size:17px; padding:12px 14px;">
+      <input class="field-input" type="text" inputmode="decimal" id="setMpg" placeholder="e.g. 25" style="font-size:17px; padding:12px 14px;">
     </div>
 
     <div class="field-group">
       <div class="field-label"><span>Gas price ($/gallon)</span></div>
-      <input class="field-input" type="number" inputmode="decimal" id="setGas" placeholder="e.g. 3.50" style="font-size:17px; padding:12px 14px;">
+      <input class="field-input" type="text" inputmode="decimal" id="setGas" placeholder="e.g. 3.50" style="font-size:17px; padding:12px 14px;">
       <div class="derived-rate" id="derivedRate">= $0.140 / mile</div>
     </div>
 
@@ -763,7 +809,7 @@
   function costPerMile(){ return settings.gas / settings.mpg; }
 
   // ---------- Field persistence ----------
-  const FIELD_IDS = ['spark-stops','spark-time','spark-miles','spark-offer','spark-return',
+  const FIELD_IDS = ['spark-time','spark-miles','spark-offer','spark-return',
     'ic-items','ic-offer','ic-speed','ic-miles','ic-mph','fd-time','fd-miles','fd-offer'];
 
   function loadFields(){
@@ -789,6 +835,22 @@
   }
   let lastTab = 'spark';
   try{ lastTab = localStorage.getItem('toc_last_tab') || 'spark'; }catch(e){}
+
+  const TAB_FIELDS = {
+    spark: ['spark-time','spark-miles','spark-offer','spark-return'],
+    instacart: ['ic-items','ic-offer','ic-speed','ic-miles','ic-mph'],
+    food: ['fd-time','fd-miles','fd-offer']
+  };
+  function clearActiveTabFields(){
+    const active = document.querySelector('.tab.active').dataset.tab;
+    (TAB_FIELDS[active] || []).forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.value = '';
+    });
+    saveFields();
+    if(active==='instacart') updateIcPreview();
+    runCheck();
+  }
 
   // ---------- Tabs ----------
   const tabs = document.querySelectorAll('.tab');
@@ -855,8 +917,8 @@
   function num(id){ const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; }
 
   function calcSpark(){
-    const stops = num('spark-stops'), time = num('spark-time'), miles = num('spark-miles'), offer = num('spark-offer');
-    if(stops===null || time===null || miles===null || offer===null || time<=0) return null;
+    const time = num('spark-time'), miles = num('spark-miles'), offer = num('spark-offer');
+    if(time===null || miles===null || offer===null || time<=0) return null;
     const returnMiles = num('spark-return') || 0;
     const fuel = (miles + returnMiles) * costPerMile();
     const hrs = time/60;
@@ -947,12 +1009,117 @@
     saveFields();
   }
 
-  // "Check It" button removed — everything recalculates live as fields change.
+  function calculateNow(){
+    runCheck();
+    const resultEl = document.getElementById('result');
+    if(!resultEl.classList.contains('show')) return; // nothing to show yet — fields incomplete
+    const card = document.getElementById('verdictCard');
+    card.scrollIntoView({behavior:'smooth', block:'center'});
+    card.classList.add('pulse');
+  }
 
-  // Save fields as user types (fixes the old persistence bug) AND live-recalculate
+  // ---------- Voice entry (minimal — no sound, no flash, no full-screen) ----------
+  // Speak one utterance, it fills whatever fields it can recognize for the
+  // active tab, then calculates automatically. A fresh SpeechRecognition
+  // instance is created per tap (not reused) — iOS Safari's implementation
+  // has a known issue where a reused instance stops working after the
+  // first use, so each tap starts clean.
+  const ONES_WORDS = { zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9,
+    ten:10, eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16, seventeen:17, eighteen:18, nineteen:19 };
+  const TENS_WORDS = { twenty:20, thirty:30, forty:40, fifty:50, sixty:60, seventy:70, eighty:80, ninety:90 };
+
+  function wordsToDigits(text){
+    let t = ' ' + text.toLowerCase() + ' ';
+    t = t.replace(/\$\s*(\d+(?:\.\d+)?)/g, (m, amt) => amt + ' dollars');
+    t = t.replace(/\b(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)[- ](one|two|three|four|five|six|seven|eight|nine)\b/g,
+      (m, tens, ones) => String(TENS_WORDS[tens] + ONES_WORDS[ones]));
+    t = t.replace(/\b(one|two|three|four|five|six|seven|eight|nine)\s+hundred\b/g,
+      (m, w) => String(ONES_WORDS[w] * 100));
+    t = t.replace(/\b[a-z]+\b/g, (w) => {
+      if(ONES_WORDS.hasOwnProperty(w)) return String(ONES_WORDS[w]);
+      if(TENS_WORDS.hasOwnProperty(w)) return String(TENS_WORDS[w]);
+      return w;
+    });
+    t = t.replace(/(\d+)\s*point\s*(\d+(?:\s+\d+)*)/g, (m, whole, frac) => whole + '.' + frac.replace(/\s+/g, ''));
+    t = t.replace(/(\d+)\s*dollars?\s*(?:and\s*)?(\d+)\s*cents?/g, (m, dollars, cents) => dollars + '.' + cents.padStart(2, '0') + ' dollars');
+    return t;
+  }
+
+  function setFieldFromMatch(id, match){
+    if(!match) return;
+    const el = document.getElementById(id);
+    if(el) el.value = match[1];
+  }
+
+  function applyVoiceEntry(rawText){
+    const t = wordsToDigits(rawText);
+    const active = document.querySelector('.tab.active').dataset.tab;
+    let remaining = t;
+
+    if(active === 'spark'){
+      setFieldFromMatch('spark-time', remaining.match(/(\d+(?:\.\d+)?)\s*(?:minutes|minute|mins|min)\b/));
+      const returnM = remaining.match(/(\d+(?:\.\d+)?)\s*return\s*(?:trip\s*)?miles?\b/);
+      if(returnM){ setFieldFromMatch('spark-return', returnM); remaining = remaining.replace(returnM[0], ' '); }
+      setFieldFromMatch('spark-miles', remaining.match(/(\d+(?:\.\d+)?)\s*miles?\b/));
+      setFieldFromMatch('spark-offer', t.match(/(\d+(?:\.\d+)?)\s*dollars?\b/));
+    } else if(active === 'instacart'){
+      setFieldFromMatch('ic-items', remaining.match(/(\d+)\s*items?\b/));
+      setFieldFromMatch('ic-offer', remaining.match(/(\d+(?:\.\d+)?)\s*dollars?\b/));
+      const mphM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:miles per hour|mph)\b/);
+      if(mphM){ setFieldFromMatch('ic-mph', mphM); remaining = remaining.replace(mphM[0], ' '); }
+      setFieldFromMatch('ic-speed', remaining.match(/(\d+(?:\.\d+)?)\s*(?:seconds per item|speed)\b/));
+      setFieldFromMatch('ic-miles', remaining.match(/(\d+(?:\.\d+)?)\s*miles?\b/));
+    } else {
+      setFieldFromMatch('fd-time', remaining.match(/(\d+(?:\.\d+)?)\s*(?:minutes|minute|mins|min)\b/));
+      setFieldFromMatch('fd-miles', remaining.match(/(\d+(?:\.\d+)?)\s*miles?\b/));
+      setFieldFromMatch('fd-offer', remaining.match(/(\d+(?:\.\d+)?)\s*dollars?\b/));
+    }
+
+    saveFields();
+    calculateNow();
+  }
+
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micBtn = document.getElementById('micBtn');
+  if(!SpeechRec){
+    micBtn.style.display = 'none';
+  } else {
+    let listening = false;
+    micBtn.addEventListener('click', ()=>{
+      if(listening) return;
+      const recognition = new SpeechRec(); // fresh instance every tap, on purpose
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      listening = true;
+      micBtn.classList.add('listening');
+      micBtn.querySelector('.mic-label').textContent = 'LISTENING…';
+      recognition.onresult = (e)=>{
+        const transcript = e.results[0][0].transcript;
+        applyVoiceEntry(transcript);
+      };
+      recognition.onerror = ()=>{ /* stay quiet — onend below resets the button either way */ };
+      recognition.onend = ()=>{
+        listening = false;
+        micBtn.classList.remove('listening');
+        micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
+      };
+      try{ recognition.start(); }
+      catch(e){
+        listening = false;
+        micBtn.classList.remove('listening');
+        micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
+      }
+    });
+  }
+
+  // Save fields as the user types, but don't recalculate anything —
+  // that only happens on an explicit CALCULATE tap now, so there's no
+  // timing guesswork about whether the user is "done" entering a value.
   FIELD_IDS.forEach(id=>{
     const el = document.getElementById(id);
-    if(el) el.addEventListener('input', ()=>{ saveFields(); runCheck(); });
+    if(!el) return;
+    el.addEventListener('input', saveFields);
   });
 
   // Instacart time preview
@@ -979,6 +1146,9 @@
   document.getElementById('ic-speed').addEventListener('input', updateIcPreview);
   document.getElementById('ic-miles').addEventListener('input', updateIcPreview);
   document.getElementById('ic-mph').addEventListener('input', updateIcPreview);
+
+  document.getElementById('clearFieldsBtn').addEventListener('click', clearActiveTabFields);
+  document.getElementById('calculateBtn').addEventListener('click', calculateNow);
 
   // ---------- Init ----------
   loadFields();

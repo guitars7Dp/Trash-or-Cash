@@ -430,6 +430,7 @@
     <div class="tab active" data-tab="spark">SPARK</div>
     <div class="tab" data-tab="instacart">INSTACART</div>
     <div class="tab" data-tab="food">FOOD DELIVERY</div>
+    <div class="tab" data-tab="shipt">SHIPT</div>
   </div>
 
   <div class="action-row">
@@ -537,6 +538,47 @@
       <div class="field-group" style="margin-bottom:0;">
         <div class="field-label"><span>Offer amount ($)</span><span class="req">required</span></div>
         <input class="field-input" type="text" inputmode="decimal" id="fd-offer" placeholder="e.g. 9.75">
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SHIPT ============ -->
+  <div class="platform-panel" id="panel-shipt" style="display:none;">
+    <div class="required-block">
+      <div class="field-group">
+        <div class="field-label"><span>Estimated time</span><span class="req">required</span></div>
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <input class="field-input" type="number" inputmode="numeric" id="shipt-time-hr" placeholder="e.g. 0">
+            <div class="field-hint" style="margin:4px 0 0 2px;">hours</div>
+          </div>
+          <div style="flex:1;">
+            <input class="field-input" type="number" inputmode="numeric" id="shipt-time-min" placeholder="e.g. 39">
+            <div class="field-hint" style="margin:4px 0 0 2px;">minutes</div>
+          </div>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label"><span>Route miles</span><span class="req">required</span></div>
+        <input class="field-input" type="text" inputmode="decimal" id="shipt-miles" placeholder="e.g. 4.4">
+      </div>
+      <div class="field-group">
+        <div class="field-label"><span>Base pay ($)</span><span class="req">required</span></div>
+        <input class="field-input" type="text" inputmode="decimal" id="shipt-base" placeholder="e.g. 11.28">
+      </div>
+      <div class="field-group" style="margin-bottom:0;">
+        <div class="field-label"><span>Tip ($)</span></div>
+        <input class="field-input" type="text" inputmode="decimal" id="shipt-tip" placeholder="leave blank to skip">
+        <div class="field-hint">Optional — enter it here, or just fold the whole total into Base pay above. Either way counts the same toward $/hr.</div>
+      </div>
+    </div>
+
+    <button class="more-toggle" data-more="shipt"><span>+ MORE DETAILS (OPTIONAL)</span><span class="chev">▾</span></button>
+    <div class="more-panel" id="more-shipt">
+      <div class="field-group" style="margin-bottom:0;">
+        <div class="field-label"><span>Return miles to store</span></div>
+        <input class="field-input" type="text" inputmode="decimal" id="shipt-return" placeholder="leave blank to skip">
+        <div class="field-hint">The trip back after your last stop, if you're heading straight back. Only counted if you enter it.</div>
       </div>
     </div>
   </div>
@@ -828,7 +870,8 @@
 
   // ---------- Field persistence ----------
   const FIELD_IDS = ['spark-time-hr','spark-time-min','spark-miles','spark-offer','spark-return',
-    'ic-items','ic-offer','ic-speed','ic-miles','ic-mph','fd-time-hr','fd-time-min','fd-miles','fd-offer'];
+    'ic-items','ic-offer','ic-speed','ic-miles','ic-mph','fd-time-hr','fd-time-min','fd-miles','fd-offer',
+    'shipt-time-hr','shipt-time-min','shipt-miles','shipt-base','shipt-tip','shipt-return'];
 
   function loadFields(){
     try{
@@ -857,7 +900,8 @@
   const TAB_FIELDS = {
     spark: ['spark-time-hr','spark-time-min','spark-miles','spark-offer','spark-return'],
     instacart: ['ic-items','ic-offer','ic-speed','ic-miles','ic-mph'],
-    food: ['fd-time-hr','fd-time-min','fd-miles','fd-offer']
+    food: ['fd-time-hr','fd-time-min','fd-miles','fd-offer'],
+    shipt: ['shipt-time-hr','shipt-time-min','shipt-miles','shipt-base','shipt-tip','shipt-return']
   };
   function clearActiveTabFields(){
     const active = document.querySelector('.tab.active').dataset.tab;
@@ -872,7 +916,7 @@
 
   // ---------- Tabs ----------
   const tabs = document.querySelectorAll('.tab');
-  const panels = { spark:'panel-spark', instacart:'panel-instacart', food:'panel-food' };
+  const panels = { spark:'panel-spark', instacart:'panel-instacart', food:'panel-food', shipt:'panel-shipt' };
   function activateTab(name){
     tabs.forEach(t=> t.classList.toggle('active', t.dataset.tab === name));
     Object.keys(panels).forEach(k=>{
@@ -981,10 +1025,25 @@
     return { gross: offer/hrs, net:(offer-fuel)/hrs, fuel, hrs, offer };
   }
 
+  function calcShipt(){
+    const time = numTime('shipt-time-hr','shipt-time-min'), miles = num('shipt-miles'), base = num('shipt-base');
+    if(time===null || miles===null || base===null || time<=0) return null;
+    const tip = num('shipt-tip') || 0;
+    const offer = base + tip;
+    const returnMiles = num('shipt-return') || 0;
+    const fuel = (miles + returnMiles) * costPerMile();
+    // Same logic as Spark: Shipt's own time estimate only covers the delivery
+    // route itself, so return miles cost real minutes on top of the fuel cost.
+    const returnHrs = returnMiles / CONSTANTS.sparkReturnMph;
+    const hrs = (time/60) + returnHrs;
+    return { gross: offer/hrs, net:(offer-fuel)/hrs, fuel, hrs, offer };
+  }
+
   function currentCalc(){
     const active = document.querySelector('.tab.active').dataset.tab;
     if(active==='spark') return calcSpark();
     if(active==='instacart') return calcInstacart();
+    if(active==='shipt') return calcShipt();
     return calcFood();
   }
 
@@ -1116,6 +1175,12 @@
       { re:/^\s*,?\s*miles?\b/, kind:'miles' },
       { re:/^\s*,?\s*(?:minutes|minute|mins|min)\b/, kind:'time' },
     ],
+    shipt: [
+      { re:/^\s*,?\s*return\s*(?:trip\s*)?miles?\b/, kind:'return' },
+      { re:/^\s*,?\s*miles?\b/, kind:'miles' },
+      { re:/^\s*,?\s*(?:minutes|minute|mins|min)\b/, kind:'time' },
+      { re:/^\s*,?\s*(?:dollars?\s*)?tip\b/, kind:'tip' },
+    ],
   };
   function recoverFoldedOffer(text, offerMatch, tab){
     if(!offerMatch) return null;
@@ -1194,7 +1259,7 @@
       setVal('ic-speed', speedVal);
       setVal('ic-miles', milesVal);
       setVal('ic-offer', offerVal);
-    } else {
+    } else if(active === 'food'){
       const hourM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:hours|hour|hrs|hr)\b/);
       if(hourM) remaining = remaining.replace(hourM[0], ' ');
       const timeM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:minutes|minute|mins|min)\b/);
@@ -1217,6 +1282,46 @@
       }
       setVal('fd-miles', milesVal);
       setVal('fd-offer', offerVal);
+    } else {
+      const hourM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:hours|hour|hrs|hr)\b/);
+      if(hourM) remaining = remaining.replace(hourM[0], ' ');
+      const timeM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:minutes|minute|mins|min)\b/);
+      const returnM = remaining.match(/(\d+(?:\.\d+)?)\s*return\s*(?:trip\s*)?miles?\b/);
+      if(returnM) remaining = remaining.replace(returnM[0], ' ');
+      const milesM = remaining.match(/(\d+(?:\.\d+)?)\s*miles?\b/);
+      // Tip is whichever dollar amount is explicitly tagged with the word
+      // "tip" (e.g. "eleven dollar tip"). Pull that one out first, then
+      // whatever dollar amount is left over — tagged "base" or not tagged
+      // at all — becomes base pay. That way "$20, $11 tip" and "twenty
+      // dollars base, eleven dollar tip" both work identically, and the
+      // driver never has to say "base" for it to register.
+      const tipM = t.match(/(\d+(?:\.\d+)?)\s*dollars?\s*tip\b/);
+      let baseSearchText = t;
+      if(tipM) baseSearchText = t.replace(tipM[0], ' ');
+      const baseM = baseSearchText.match(/(\d+(?:\.\d+)?)\s*dollars?\b/);
+      const recovered = recoverFoldedOffer(baseSearchText, baseM, 'shipt');
+
+      let timeVal = timeM ? timeM[1] : null;
+      let hourVal = hourM ? hourM[1] : null;
+      let returnVal = returnM ? returnM[1] : null;
+      let milesVal = milesM ? milesM[1] : null;
+      let baseVal = baseM ? baseM[1] : null;
+      let tipVal = tipM ? tipM[1] : null;
+      if(recovered){
+        baseVal = recovered.offer;
+        if(recovered.kind === 'return' && !returnM) returnVal = recovered.value;
+        else if(recovered.kind === 'miles' && !milesM) milesVal = recovered.value;
+        else if(recovered.kind === 'time' && !timeM) timeVal = recovered.value;
+        else if(recovered.kind === 'tip' && !tipM) tipVal = recovered.value;
+      }
+      if(timeVal !== null || hourVal !== null){
+        setVal('shipt-time-min', timeVal !== null ? timeVal : '');
+        setVal('shipt-time-hr', hourVal !== null ? hourVal : '');
+      }
+      setVal('shipt-return', returnVal);
+      setVal('shipt-miles', milesVal);
+      setVal('shipt-base', baseVal);
+      setVal('shipt-tip', tipVal);
     }
 
     saveFields();
@@ -1321,7 +1426,7 @@
   // specific fields only, update the verdict live as you type instead of
   // making you tap Calculate again. Required fields keep the explicit-tap
   // behavior — that one's still the safest way to enter a fresh order.
-  const MORE_DETAILS_LIVE_FIELDS = ['spark-return', 'ic-speed', 'ic-mph'];
+  const MORE_DETAILS_LIVE_FIELDS = ['spark-return', 'ic-speed', 'ic-mph', 'shipt-return'];
   MORE_DETAILS_LIVE_FIELDS.forEach(id=>{
     const el = document.getElementById(id);
     if(!el) return;

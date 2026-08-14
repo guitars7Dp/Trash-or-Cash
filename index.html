@@ -448,8 +448,17 @@
   <div class="platform-panel" id="panel-spark">
     <div class="required-block">
       <div class="field-group">
-        <div class="field-label"><span>Estimated time (min)</span><span class="req">required</span></div>
-        <input class="field-input" type="number" inputmode="numeric" id="spark-time" placeholder="e.g. 45">
+        <div class="field-label"><span>Estimated time</span><span class="req">required</span></div>
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <input class="field-input" type="number" inputmode="numeric" id="spark-time-hr" placeholder="0">
+            <div class="field-hint" style="margin:4px 0 0 2px;">hours</div>
+          </div>
+          <div style="flex:1;">
+            <input class="field-input" type="number" inputmode="numeric" id="spark-time-min" placeholder="e.g. 45">
+            <div class="field-hint" style="margin:4px 0 0 2px;">minutes</div>
+          </div>
+        </div>
       </div>
       <div class="field-group">
         <div class="field-label"><span>Route miles</span><span class="req">required</span></div>
@@ -509,8 +518,17 @@
   <div class="platform-panel" id="panel-food" style="display:none;">
     <div class="required-block">
       <div class="field-group">
-        <div class="field-label"><span>Estimated time (min)</span><span class="req">required</span></div>
-        <input class="field-input" type="number" inputmode="numeric" id="fd-time" placeholder="e.g. 22">
+        <div class="field-label"><span>Estimated time</span><span class="req">required</span></div>
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <input class="field-input" type="number" inputmode="numeric" id="fd-time-hr" placeholder="0">
+            <div class="field-hint" style="margin:4px 0 0 2px;">hours</div>
+          </div>
+          <div style="flex:1;">
+            <input class="field-input" type="number" inputmode="numeric" id="fd-time-min" placeholder="e.g. 22">
+            <div class="field-hint" style="margin:4px 0 0 2px;">minutes</div>
+          </div>
+        </div>
       </div>
       <div class="field-group">
         <div class="field-label"><span>Miles</span><span class="req">required</span></div>
@@ -809,8 +827,8 @@
   function costPerMile(){ return settings.gas / settings.mpg; }
 
   // ---------- Field persistence ----------
-  const FIELD_IDS = ['spark-time','spark-miles','spark-offer','spark-return',
-    'ic-items','ic-offer','ic-speed','ic-miles','ic-mph','fd-time','fd-miles','fd-offer'];
+  const FIELD_IDS = ['spark-time-hr','spark-time-min','spark-miles','spark-offer','spark-return',
+    'ic-items','ic-offer','ic-speed','ic-miles','ic-mph','fd-time-hr','fd-time-min','fd-miles','fd-offer'];
 
   function loadFields(){
     try{
@@ -837,9 +855,9 @@
   try{ lastTab = localStorage.getItem('toc_last_tab') || 'spark'; }catch(e){}
 
   const TAB_FIELDS = {
-    spark: ['spark-time','spark-miles','spark-offer','spark-return'],
+    spark: ['spark-time-hr','spark-time-min','spark-miles','spark-offer','spark-return'],
     instacart: ['ic-items','ic-offer','ic-speed','ic-miles','ic-mph'],
-    food: ['fd-time','fd-miles','fd-offer']
+    food: ['fd-time-hr','fd-time-min','fd-miles','fd-offer']
   };
   function clearActiveTabFields(){
     const active = document.querySelector('.tab.active').dataset.tab;
@@ -916,8 +934,19 @@
   // ---------- Calculation ----------
   function num(id){ const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; }
 
+  // Estimated time is entered as separate hours/minutes fields so nobody has
+  // to convert something like "1 hr 20 min" into 80 in their head while
+  // driving. Blank hours = 0. Both blank = no time entered at all.
+  function numTime(hrId, minId){
+    const hrEl = document.getElementById(hrId), minEl = document.getElementById(minId);
+    const hrRaw = hrEl ? hrEl.value : '', minRaw = minEl ? minEl.value : '';
+    if(hrRaw === '' && minRaw === '') return null;
+    const hr = parseFloat(hrRaw) || 0, min = parseFloat(minRaw) || 0;
+    return hr*60 + min;
+  }
+
   function calcSpark(){
-    const time = num('spark-time'), miles = num('spark-miles'), offer = num('spark-offer');
+    const time = numTime('spark-time-hr','spark-time-min'), miles = num('spark-miles'), offer = num('spark-offer');
     if(time===null || miles===null || offer===null || time<=0) return null;
     const returnMiles = num('spark-return') || 0;
     const fuel = (miles + returnMiles) * costPerMile();
@@ -945,7 +974,7 @@
   }
 
   function calcFood(){
-    const time = num('fd-time'), miles = num('fd-miles'), offer = num('fd-offer');
+    const time = numTime('fd-time-hr','fd-time-min'), miles = num('fd-miles'), offer = num('fd-offer');
     if(time===null || miles===null || offer===null || time<=0) return null;
     const fuel = miles * costPerMile();
     const hrs = time/60;
@@ -1108,6 +1137,8 @@
     let remaining = t;
 
     if(active === 'spark'){
+      const hourM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:hours|hour|hrs|hr)\b/);
+      if(hourM) remaining = remaining.replace(hourM[0], ' ');
       const timeM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:minutes|minute|mins|min)\b/);
       const returnM = remaining.match(/(\d+(?:\.\d+)?)\s*return\s*(?:trip\s*)?miles?\b/);
       if(returnM) remaining = remaining.replace(returnM[0], ' ');
@@ -1116,6 +1147,7 @@
       const recovered = recoverFoldedOffer(t, offerM, 'spark');
 
       let timeVal = timeM ? timeM[1] : null;
+      let hourVal = hourM ? hourM[1] : null;
       let returnVal = returnM ? returnM[1] : null;
       let milesVal = milesM ? milesM[1] : null;
       let offerVal = offerM ? offerM[1] : null;
@@ -1125,7 +1157,14 @@
         else if(recovered.kind === 'miles' && !milesM) milesVal = recovered.value;
         else if(recovered.kind === 'time' && !timeM) timeVal = recovered.value;
       }
-      setVal('spark-time', timeVal);
+      // Only touch the time fields at all if some piece of time was actually
+      // spoken this utterance. When it was, fill whichever part (hours,
+      // minutes, or both) was recognized, and clear the other part rather
+      // than leaving a stale hour/minute value from a previous order.
+      if(timeVal !== null || hourVal !== null){
+        setVal('spark-time-min', timeVal !== null ? timeVal : '');
+        setVal('spark-time-hr', hourVal !== null ? hourVal : '');
+      }
       setVal('spark-return', returnVal);
       setVal('spark-miles', milesVal);
       setVal('spark-offer', offerVal);
@@ -1156,12 +1195,15 @@
       setVal('ic-miles', milesVal);
       setVal('ic-offer', offerVal);
     } else {
+      const hourM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:hours|hour|hrs|hr)\b/);
+      if(hourM) remaining = remaining.replace(hourM[0], ' ');
       const timeM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:minutes|minute|mins|min)\b/);
       const milesM = remaining.match(/(\d+(?:\.\d+)?)\s*miles?\b/);
       const offerM = t.match(/(\d+(?:\.\d+)?)\s*dollars?\b/);
       const recovered = recoverFoldedOffer(t, offerM, 'food');
 
       let timeVal = timeM ? timeM[1] : null;
+      let hourVal = hourM ? hourM[1] : null;
       let milesVal = milesM ? milesM[1] : null;
       let offerVal = offerM ? offerM[1] : null;
       if(recovered){
@@ -1169,7 +1211,10 @@
         if(recovered.kind === 'miles' && !milesM) milesVal = recovered.value;
         else if(recovered.kind === 'time' && !timeM) timeVal = recovered.value;
       }
-      setVal('fd-time', timeVal);
+      if(timeVal !== null || hourVal !== null){
+        setVal('fd-time-min', timeVal !== null ? timeVal : '');
+        setVal('fd-time-hr', hourVal !== null ? hourVal : '');
+      }
       setVal('fd-miles', milesVal);
       setVal('fd-offer', offerVal);
     }
@@ -1268,6 +1313,19 @@
     const el = document.getElementById(id);
     if(!el) return;
     el.addEventListener('input', saveFields);
+  });
+
+  // "More Details" fields are optional refinements you often add AFTER
+  // you've already hit Calculate and are looking at a verdict (e.g. typing
+  // in return miles once you know you're heading straight back). For those
+  // specific fields only, update the verdict live as you type instead of
+  // making you tap Calculate again. Required fields keep the explicit-tap
+  // behavior — that one's still the safest way to enter a fresh order.
+  const MORE_DETAILS_LIVE_FIELDS = ['spark-return', 'ic-speed', 'ic-mph'];
+  MORE_DETAILS_LIVE_FIELDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('input', runCheck);
   });
 
   // Instacart time preview

@@ -469,6 +469,7 @@
       <div class="field-group" style="margin-bottom:0;">
         <div class="field-label"><span>Offer amount ($)</span><span class="req">required</span></div>
         <input class="field-input" type="text" inputmode="decimal" id="spark-offer" placeholder="e.g. 24.50">
+        <div class="field-hint">By voice: "e.g. 12 dollars and 8 cents"</div>
       </div>
     </div>
 
@@ -496,6 +497,7 @@
       <div class="field-group" style="margin-bottom:0;">
         <div class="field-label"><span>Offer amount ($)</span><span class="req">required</span></div>
         <input class="field-input" type="text" inputmode="decimal" id="ic-offer" placeholder="e.g. 41.00">
+        <div class="field-hint">By voice: "e.g. 12 dollars and 8 cents"</div>
       </div>
     </div>
     <div class="field-hint" style="margin:-6px 0 14px 4px;" id="ic-time-preview">Instacart doesn't show a time estimate, so time is estimated from item count.</div>
@@ -538,6 +540,7 @@
       <div class="field-group">
         <div class="field-label"><span>Base pay ($)</span><span class="req">required</span></div>
         <input class="field-input" type="text" inputmode="decimal" id="shipt-base" placeholder="e.g. 11.28">
+        <div class="field-hint">By voice: "e.g. 12 dollars and 8 cents"</div>
       </div>
       <div class="field-group" style="margin-bottom:0;">
         <div class="field-label"><span>Tip ($)</span></div>
@@ -579,6 +582,7 @@
       <div class="field-group" style="margin-bottom:0;">
         <div class="field-label"><span>Offer amount ($)</span><span class="req">required</span></div>
         <input class="field-input" type="text" inputmode="decimal" id="fd-offer" placeholder="e.g. 9.75">
+        <div class="field-hint">By voice: "e.g. 12 dollars and 8 cents"</div>
       </div>
     </div>
   </div>
@@ -1209,18 +1213,45 @@
     return null;
   }
 
+  // Shared by every tab's voice parsing: pulls hours and minutes out of the
+  // text (removing the hours portion as it goes, same as before), leaving
+  // the rest for whatever field-specific matches come next.
+  function extractHourAndTime(text){
+    const hourM = text.match(/(\d+(?:\.\d+)?)\s*(?:hours|hour|hrs|hr)\b/);
+    const remaining = hourM ? text.replace(hourM[0], ' ') : text;
+    const timeM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:minutes|minute|mins|min)\b/);
+    return { hourM, timeM, remaining };
+  }
+
+  // Shared by Spark and Shipt, the two tabs with a return-miles field.
+  // Removes the return-miles match from the text as it goes, same as
+  // before, so the plain "miles" search that follows doesn't double-count it.
+  function extractReturnMiles(text){
+    const returnM = text.match(/(\d+(?:\.\d+)?)\s*(?:return(?:ed)?\s*(?:trip\s*)?miles?|miles?\s*return(?:ed)?)\b/);
+    const remaining = returnM ? text.replace(returnM[0], ' ') : text;
+    return { returnM, remaining };
+  }
+
+  // Shared by every tab: only touch the hour/minute fields at all if some
+  // piece of time was actually spoken this utterance. When it was, fill
+  // whichever part was recognized and clear the other, rather than leaving
+  // a stale value from a previous order.
+  function applyTimeFields(hrId, minId, timeVal, hourVal){
+    if(timeVal !== null || hourVal !== null){
+      setVal(minId, timeVal !== null ? timeVal : '');
+      setVal(hrId, hourVal !== null ? hourVal : '');
+    }
+  }
+
   function applyVoiceEntry(rawText){
     const t = wordsToDigits(rawText);
     const active = document.querySelector('.tab.active').dataset.tab;
     let remaining = t;
 
     if(active === 'spark'){
-      const hourM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:hours|hour|hrs|hr)\b/);
-      if(hourM) remaining = remaining.replace(hourM[0], ' ');
-      const timeM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:minutes|minute|mins|min)\b/);
-      const returnM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:return(?:ed)?\s*(?:trip\s*)?miles?|miles?\s*return(?:ed)?)\b/);
-      if(returnM) remaining = remaining.replace(returnM[0], ' ');
-      const milesM = remaining.match(/(\d+(?:\.\d+)?)\s*miles?\b/);
+      const { hourM, timeM, remaining: afterHour } = extractHourAndTime(remaining);
+      const { returnM, remaining: afterReturn } = extractReturnMiles(afterHour);
+      const milesM = afterReturn.match(/(\d+(?:\.\d+)?)\s*miles?\b/);
       const offerM = t.match(/(\d+(?:\.\d+)?)\s*dollars?\b/);
       const recovered = recoverFoldedOffer(t, offerM, 'spark');
 
@@ -1235,14 +1266,7 @@
         else if(recovered.kind === 'miles' && !milesM) milesVal = recovered.value;
         else if(recovered.kind === 'time' && !timeM) timeVal = recovered.value;
       }
-      // Only touch the time fields at all if some piece of time was actually
-      // spoken this utterance. When it was, fill whichever part (hours,
-      // minutes, or both) was recognized, and clear the other part rather
-      // than leaving a stale hour/minute value from a previous order.
-      if(timeVal !== null || hourVal !== null){
-        setVal('spark-time-min', timeVal !== null ? timeVal : '');
-        setVal('spark-time-hr', hourVal !== null ? hourVal : '');
-      }
+      applyTimeFields('spark-time-hr', 'spark-time-min', timeVal, hourVal);
       setVal('spark-return', returnVal);
       setVal('spark-miles', milesVal);
       setVal('spark-offer', plausiblePay(offerVal));
@@ -1273,10 +1297,8 @@
       setVal('ic-miles', milesVal);
       setVal('ic-offer', plausiblePay(offerVal));
     } else if(active === 'food'){
-      const hourM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:hours|hour|hrs|hr)\b/);
-      if(hourM) remaining = remaining.replace(hourM[0], ' ');
-      const timeM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:minutes|minute|mins|min)\b/);
-      const milesM = remaining.match(/(\d+(?:\.\d+)?)\s*miles?\b/);
+      const { hourM, timeM, remaining: afterHour } = extractHourAndTime(remaining);
+      const milesM = afterHour.match(/(\d+(?:\.\d+)?)\s*miles?\b/);
       const offerM = t.match(/(\d+(?:\.\d+)?)\s*dollars?\b/);
       const recovered = recoverFoldedOffer(t, offerM, 'food');
 
@@ -1289,19 +1311,13 @@
         if(recovered.kind === 'miles' && !milesM) milesVal = recovered.value;
         else if(recovered.kind === 'time' && !timeM) timeVal = recovered.value;
       }
-      if(timeVal !== null || hourVal !== null){
-        setVal('fd-time-min', timeVal !== null ? timeVal : '');
-        setVal('fd-time-hr', hourVal !== null ? hourVal : '');
-      }
+      applyTimeFields('fd-time-hr', 'fd-time-min', timeVal, hourVal);
       setVal('fd-miles', milesVal);
       setVal('fd-offer', plausiblePay(offerVal));
     } else {
-      const hourM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:hours|hour|hrs|hr)\b/);
-      if(hourM) remaining = remaining.replace(hourM[0], ' ');
-      const timeM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:minutes|minute|mins|min)\b/);
-      const returnM = remaining.match(/(\d+(?:\.\d+)?)\s*(?:return(?:ed)?\s*(?:trip\s*)?miles?|miles?\s*return(?:ed)?)\b/);
-      if(returnM) remaining = remaining.replace(returnM[0], ' ');
-      const milesM = remaining.match(/(\d+(?:\.\d+)?)\s*miles?\b/);
+      const { hourM, timeM, remaining: afterHour } = extractHourAndTime(remaining);
+      const { returnM, remaining: afterReturn } = extractReturnMiles(afterHour);
+      const milesM = afterReturn.match(/(\d+(?:\.\d+)?)\s*miles?\b/);
       // Step 1: check for a fold first. If the phone's own speech-to-text
       // glued two spoken amounts into one decimal before we ever see the
       // text (e.g. "44 dollars, 11 tip" transcribed as "$44.11 tip"),
@@ -1309,7 +1325,7 @@
       // field the tail word points to. This has to run before any keyword
       // search below, since by the time the text reaches us the two
       // amounts are already a single token — nothing else can un-merge it.
-      let baseM = t.match(/(\d+(?:\.\d+)?)\s*dollars?\b/);
+      const baseM = t.match(/(\d+(?:\.\d+)?)\s*dollars?\b/);
       const recovered = recoverFoldedOffer(t, baseM, 'shipt');
 
       let timeVal = timeM ? timeM[1] : null;
@@ -1347,9 +1363,9 @@
           // it at all, fall back to whichever bare number remains once
           // every other recognized field (hours, minutes, return miles,
           // miles, tip) is stripped out.
-          let searchText = tipM ? t.replace(tipM[0], ' ') : t;
-          const baseM2 = searchText.match(/(\d+(?:\.\d+)?)\s*dollars?\b/);
-          baseVal = baseM2 ? baseM2[1] : null;
+          const searchText = tipM ? t.replace(tipM[0], ' ') : t;
+          const taggedBaseM = searchText.match(/(\d+(?:\.\d+)?)\s*dollars?\b/);
+          baseVal = taggedBaseM ? taggedBaseM[1] : null;
           if(baseVal === null){
             let cleaned = searchText;
             if(hourM) cleaned = cleaned.replace(hourM[0], ' ');
@@ -1361,10 +1377,7 @@
           }
         }
       }
-      if(timeVal !== null || hourVal !== null){
-        setVal('shipt-time-min', timeVal !== null ? timeVal : '');
-        setVal('shipt-time-hr', hourVal !== null ? hourVal : '');
-      }
+      applyTimeFields('shipt-time-hr', 'shipt-time-min', timeVal, hourVal);
       setVal('shipt-return', returnVal);
       setVal('shipt-miles', milesVal);
       setVal('shipt-base', plausiblePay(baseVal));

@@ -429,8 +429,8 @@
   <div class="tabs" id="tabs">
     <div class="tab active" data-tab="spark">SPARK</div>
     <div class="tab" data-tab="instacart">INSTACART</div>
-    <div class="tab" data-tab="food">FOOD DELIVERY</div>
     <div class="tab" data-tab="shipt">SHIPT</div>
+    <div class="tab" data-tab="food">FOOD DELIVERY</div>
   </div>
 
   <div class="action-row">
@@ -515,33 +515,6 @@
     </div>
   </div>
 
-  <!-- ============ FOOD DELIVERY ============ -->
-  <div class="platform-panel" id="panel-food" style="display:none;">
-    <div class="required-block">
-      <div class="field-group">
-        <div class="field-label"><span>Estimated time</span><span class="req">required</span></div>
-        <div style="display:flex; gap:10px;">
-          <div style="flex:1;">
-            <input class="field-input" type="number" inputmode="numeric" id="fd-time-hr" placeholder="e.g. 0">
-            <div class="field-hint" style="margin:4px 0 0 2px;">hours</div>
-          </div>
-          <div style="flex:1;">
-            <input class="field-input" type="number" inputmode="numeric" id="fd-time-min" placeholder="e.g. 22">
-            <div class="field-hint" style="margin:4px 0 0 2px;">minutes</div>
-          </div>
-        </div>
-      </div>
-      <div class="field-group">
-        <div class="field-label"><span>Miles</span><span class="req">required</span></div>
-        <input class="field-input" type="text" inputmode="decimal" id="fd-miles" placeholder="e.g. 6.4">
-      </div>
-      <div class="field-group" style="margin-bottom:0;">
-        <div class="field-label"><span>Offer amount ($)</span><span class="req">required</span></div>
-        <input class="field-input" type="text" inputmode="decimal" id="fd-offer" placeholder="e.g. 9.75">
-      </div>
-    </div>
-  </div>
-
   <!-- ============ SHIPT ============ -->
   <div class="platform-panel" id="panel-shipt" style="display:none;">
     <div class="required-block">
@@ -579,6 +552,33 @@
         <div class="field-label"><span>Return miles to store</span></div>
         <input class="field-input" type="text" inputmode="decimal" id="shipt-return" placeholder="leave blank to skip">
         <div class="field-hint">The trip back after your last stop, if you're heading straight back. Only counted if you enter it.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FOOD DELIVERY ============ -->
+  <div class="platform-panel" id="panel-food" style="display:none;">
+    <div class="required-block">
+      <div class="field-group">
+        <div class="field-label"><span>Estimated time</span><span class="req">required</span></div>
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <input class="field-input" type="number" inputmode="numeric" id="fd-time-hr" placeholder="e.g. 0">
+            <div class="field-hint" style="margin:4px 0 0 2px;">hours</div>
+          </div>
+          <div style="flex:1;">
+            <input class="field-input" type="number" inputmode="numeric" id="fd-time-min" placeholder="e.g. 22">
+            <div class="field-hint" style="margin:4px 0 0 2px;">minutes</div>
+          </div>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label"><span>Miles</span><span class="req">required</span></div>
+        <input class="field-input" type="text" inputmode="decimal" id="fd-miles" placeholder="e.g. 6.4">
+      </div>
+      <div class="field-group" style="margin-bottom:0;">
+        <div class="field-label"><span>Offer amount ($)</span><span class="req">required</span></div>
+        <input class="field-input" type="text" inputmode="decimal" id="fd-offer" placeholder="e.g. 9.75">
       </div>
     </div>
   </div>
@@ -900,8 +900,8 @@
   const TAB_FIELDS = {
     spark: ['spark-time-hr','spark-time-min','spark-miles','spark-offer','spark-return'],
     instacart: ['ic-items','ic-offer','ic-speed','ic-miles','ic-mph'],
-    food: ['fd-time-hr','fd-time-min','fd-miles','fd-offer'],
-    shipt: ['shipt-time-hr','shipt-time-min','shipt-miles','shipt-base','shipt-tip','shipt-return']
+    shipt: ['shipt-time-hr','shipt-time-min','shipt-miles','shipt-base','shipt-tip','shipt-return'],
+    food: ['fd-time-hr','fd-time-min','fd-miles','fd-offer']
   };
   function clearActiveTabFields(){
     const active = document.querySelector('.tab.active').dataset.tab;
@@ -916,7 +916,7 @@
 
   // ---------- Tabs ----------
   const tabs = document.querySelectorAll('.tab');
-  const panels = { spark:'panel-spark', instacart:'panel-instacart', food:'panel-food', shipt:'panel-shipt' };
+  const panels = { spark:'panel-spark', instacart:'panel-instacart', shipt:'panel-shipt', food:'panel-food' };
   function activateTab(name){
     tabs.forEach(t=> t.classList.toggle('active', t.dataset.tab === name));
     Object.keys(panels).forEach(k=>{
@@ -1289,30 +1289,51 @@
       const returnM = remaining.match(/(\d+(?:\.\d+)?)\s*return\s*(?:trip\s*)?miles?\b/);
       if(returnM) remaining = remaining.replace(returnM[0], ' ');
       const milesM = remaining.match(/(\d+(?:\.\d+)?)\s*miles?\b/);
-      // Tip is whichever dollar amount is explicitly tagged with the word
-      // "tip" (e.g. "eleven dollar tip"). Pull that one out first, then
-      // whatever dollar amount is left over — tagged "base" or not tagged
-      // at all — becomes base pay. That way "$20, $11 tip" and "twenty
-      // dollars base, eleven dollar tip" both work identically, and the
-      // driver never has to say "base" for it to register.
-      const tipM = t.match(/(\d+(?:\.\d+)?)\s*dollars?\s*tip\b/);
-      let baseSearchText = t;
-      if(tipM) baseSearchText = t.replace(tipM[0], ' ');
-      const baseM = baseSearchText.match(/(\d+(?:\.\d+)?)\s*dollars?\b/);
-      const recovered = recoverFoldedOffer(baseSearchText, baseM, 'shipt');
+      // Base pay is searched for first, tagged with the word "dollars." If
+      // the phone's own speech-to-text glued two spoken amounts into one
+      // decimal before we ever see the text (e.g. "44 dollars, 11 tip"
+      // transcribed as "$44.11 tip"), recoverFoldedOffer splits that back
+      // into base pay + whichever field the tail word points to.
+      const baseM = t.match(/(\d+(?:\.\d+)?)\s*dollars?\b/);
+      const recovered = recoverFoldedOffer(t, baseM, 'shipt');
 
       let timeVal = timeM ? timeM[1] : null;
       let hourVal = hourM ? hourM[1] : null;
       let returnVal = returnM ? returnM[1] : null;
       let milesVal = milesM ? milesM[1] : null;
       let baseVal = baseM ? baseM[1] : null;
-      let tipVal = tipM ? tipM[1] : null;
+      let tipVal = null;
+
       if(recovered){
         baseVal = recovered.offer;
         if(recovered.kind === 'return' && !returnM) returnVal = recovered.value;
         else if(recovered.kind === 'miles' && !milesM) milesVal = recovered.value;
         else if(recovered.kind === 'time' && !timeM) timeVal = recovered.value;
-        else if(recovered.kind === 'tip' && !tipM) tipVal = recovered.value;
+        else if(recovered.kind === 'tip') tipVal = recovered.value;
+      }
+
+      if(tipVal === null){
+        // No fold accounted for the tip — look for it as its own mention,
+        // tagged with the word "tip" (with or without "dollars" attached),
+        // outside wherever base pay was already found.
+        const searchText = baseM ? t.replace(baseM[0], ' ') : t;
+        const tipM = searchText.match(/(\d+(?:\.\d+)?)\s*(?:dollars?\s*)?tip\b/);
+        if(tipM) tipVal = tipM[1];
+
+        // If "dollars" was never said at all, there's nothing to anchor
+        // base pay to. Treat whichever bare number is left over — after
+        // stripping every other recognized field (hours, minutes, return
+        // miles, miles, tip) — as base pay, so "44, 11 tip" still works
+        // without ever needing the word "dollars."
+        if(baseVal === null){
+          let cleaned = tipM ? searchText.replace(tipM[0], ' ') : searchText;
+          if(hourM) cleaned = cleaned.replace(hourM[0], ' ');
+          if(timeM) cleaned = cleaned.replace(timeM[0], ' ');
+          if(returnM) cleaned = cleaned.replace(returnM[0], ' ');
+          if(milesM) cleaned = cleaned.replace(milesM[0], ' ');
+          const bareM = cleaned.match(/(\d+(?:\.\d+)?)/);
+          if(bareM) baseVal = bareM[1];
+        }
       }
       if(timeVal !== null || hourVal !== null){
         setVal('shipt-time-min', timeVal !== null ? timeVal : '');

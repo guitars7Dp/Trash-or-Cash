@@ -66,14 +66,30 @@
   /* ---------- Header / Logo ---------- */
   header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
   .header-btns{ display:flex; align-items:center; gap:8px; }
-  .brand{ display:flex; align-items:center; gap:10px; }
-  .brand-icon{ width:52px; height:52px; flex:0 0 auto; }
-  .wordmark{ font-family:'SpicySale', cursive; font-size:28px; line-height:1.35; letter-spacing:0.01em; text-align:center; }
-  .wordmark .trash-word{ color:var(--trash); display:block; }
-  .wordmark .cash-word{ color:var(--cash); display:block; }
+  .brand{ display:flex; align-items:center; gap:12px; min-width:0; }
+  .brand-icon{ width:clamp(52px, 15vw, 64px); height:clamp(52px, 15vw, 64px); flex:0 0 auto; }
+  .wordmark{
+    font-family:'SpicySale', cursive; font-size:clamp(17px, 5.2vw, 22px); line-height:1;
+    letter-spacing:0.02em; text-align:left;
+    display:flex; align-items:center; flex-wrap:nowrap; gap:0.16em;
+    white-space:nowrap;
+  }
+  .wordmark .trash-word,
+  .wordmark .cash-word{
+    -webkit-text-stroke: 0.035em #201812;
+    paint-order: stroke fill;
+    text-shadow:
+      0.03em 0 #201812, -0.03em 0 #201812,
+      0 0.03em #201812, 0 -0.03em #201812,
+      0.025em 0.025em #201812, -0.025em -0.025em #201812,
+      0.025em -0.025em #201812, -0.025em 0.025em #201812;
+  }
+  .wordmark .trash-word{ color:var(--trash); }
+  .wordmark .cash-word{ color:var(--cash); }
   .wordmark .or-word{
-    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:12px;
-    letter-spacing:0.15em; color:var(--caution); display:block; margin:4px 0;
+    font-family:'SpicySale', cursive; font-size:0.62em;
+    font-style:italic; color:var(--caution);
+    text-shadow: 0.04em 0.04em 0 #201812;
   }
 
   .gear-btn{
@@ -407,7 +423,7 @@
   <path d="M66 67l-13-2M66 73l-14 3M132 67l13-2M132 73l14 3" stroke="#f3ead2" stroke-width="1.3" stroke-linecap="round" opacity="0.85"/>
 </svg>
       <div class="wordmark">
-        <span class="trash-word">TRASH</span><span class="or-word">— OR —</span><span class="cash-word">CASH</span>
+        <span class="trash-word">TRASH</span><span class="or-word">— or —</span><span class="cash-word">CASH</span>
       </div>
     </div>
     <div class="header-btns">
@@ -786,6 +802,7 @@
     <div class="field-group">
       <div class="field-label"><span>Your vehicle's MPG</span></div>
       <input class="field-input" type="text" inputmode="decimal" id="setMpg" placeholder="e.g. 25" style="font-size:17px; padding:12px 14px;">
+      <div class="field-hint">We'll start you off at 25 MPG. Know your vehicle's number? Enter it anytime.</div>
     </div>
 
     <div class="field-group">

@@ -268,6 +268,88 @@
   }
   .derived-rate{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--caution); margin-top:6px; }
 
+  /* ---------- Settings: secondary action row (tutorial / help) ---------- */
+  .modal-secondary-row{ display:flex; gap:10px; margin-top:10px; }
+  .modal-secondary-btn{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+    padding:12px 8px; border-radius:12px; border:1.5px solid var(--line-bright);
+    background:var(--panel); color:var(--text); font-family:'IBM Plex Mono',monospace;
+    font-weight:600; font-size:11.5px; letter-spacing:0.03em; cursor:pointer;
+  }
+  .modal-secondary-btn:active{ background:var(--panel-2); border-color:var(--caution); }
+  .modal-secondary-btn svg{ width:15px; height:15px; flex-shrink:0; }
+
+  /* ---------- FAQ modal ---------- */
+  .modal-close{
+    position:absolute; top:14px; right:14px; width:32px; height:32px; border-radius:9px;
+    border:1px solid var(--line); background:var(--panel-2); color:var(--muted);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .modal-close svg{ width:16px; height:16px; }
+  .modal-pos{ position:relative; }
+  .faq-item{ border:1px solid var(--line); border-radius:12px; margin-bottom:10px; overflow:hidden; }
+  .faq-q{
+    width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--panel); border:none; padding:13px 14px; text-align:left; cursor:pointer;
+    color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-weight:600; font-size:13.5px;
+  }
+  .faq-q .chev{ flex:0 0 auto; transition:transform .2s ease; color:var(--muted); }
+  .faq-item.open .faq-q .chev{ transform:rotate(180deg); }
+  .faq-a{ display:none; padding:0 14px 14px; font-size:13px; color:var(--muted); line-height:1.5; }
+  .faq-item.open .faq-a{ display:block; }
+
+  /* ---------- Onboarding tutorial ---------- */
+  #tutSpotlight{
+    position:fixed; z-index:300; pointer-events:none; border-radius:14px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,0.78);
+    border:2px solid var(--caution);
+    transition:top .28s ease, left .28s ease, width .28s ease, height .28s ease, opacity .2s ease;
+    top:50%; left:50%; width:0; height:0; opacity:0;
+  }
+  #tutSpotlight.tut-show{ opacity:1; }
+  #tutOverlay{ display:none; }
+  #tutOverlay.tut-active{ display:block; }
+  #tutCard{
+    position:fixed; z-index:302; max-width:300px; width:88vw;
+    background:var(--panel); border:1.5px solid var(--line-bright); border-radius:16px;
+    padding:16px 16px 14px; box-shadow:0 12px 34px rgba(0,0,0,0.45);
+    transition:top .28s ease, left .28s ease;
+    visibility:hidden; opacity:0;
+  }
+  #tutCard.tut-show{ visibility:visible; opacity:1; transition:top .28s ease, left .28s ease, opacity .2s ease; }
+  #tutArrow{
+    position:fixed; z-index:302; width:16px; height:16px; background:var(--panel);
+    border:1.5px solid var(--line-bright); transform:rotate(45deg);
+    visibility:hidden; opacity:0;
+  }
+  #tutArrow.tut-show{ visibility:visible; opacity:1; }
+  #tutArrow.arrow-top{ border-right:none; border-bottom:none; }
+  #tutArrow.arrow-bottom{ border-left:none; border-top:none; }
+  .tut-head{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .tut-head svg{ width:36px; height:36px; flex:0 0 auto; }
+  .tut-progress{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em;
+    color:var(--muted); text-transform:uppercase;
+  }
+  .tut-title{ font-family:'Archivo Black',sans-serif; font-size:16px; margin:0 0 6px; }
+  .tut-text{ font-size:13.5px; color:var(--muted); line-height:1.5; margin:0 0 12px; }
+  .tut-dots{ display:flex; gap:5px; margin-bottom:14px; }
+  .tut-dots span{ width:6px; height:6px; border-radius:50%; background:var(--line-bright); }
+  .tut-dots span.on{ background:var(--caution); }
+  .tut-actions{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .tut-skip{
+    background:none; border:none; color:var(--muted); font-family:'IBM Plex Sans',sans-serif;
+    font-weight:500; font-size:12.5px; letter-spacing:0.01em; cursor:pointer; padding:8px 2px;
+    text-decoration:underline;
+  }
+  .tut-nav{ display:flex; gap:8px; }
+  .tut-back, .tut-next{
+    font-family:'Archivo Black',sans-serif; font-size:12.5px; letter-spacing:0.02em;
+    border-radius:10px; padding:10px 16px; cursor:pointer;
+  }
+  .tut-back{ background:var(--panel-2); border:1.5px solid var(--line-bright); color:var(--text); }
+  .tut-back:disabled{ opacity:0.35; cursor:default; }
+  .tut-next{ background:var(--caution); border:none; color:var(--bg); }
 
 </style>
 </head>
@@ -817,6 +899,76 @@
     </div>
 
     <button class="modal-save" id="saveSettings">SAVE</button>
+
+    <div class="modal-secondary-row">
+      <button class="modal-secondary-btn" id="replayTutorialBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+        REPLAY TUTORIAL
+      </button>
+      <button class="modal-secondary-btn" id="openFaqBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        HELP &amp; FAQ
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HELP / FAQ MODAL ============ -->
+<div class="modal-backdrop" id="faqModal">
+  <div class="modal modal-pos">
+    <button class="modal-close" id="closeFaqBtn" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+    <h2>Help &amp; FAQ</h2>
+    <div class="modal-sub" style="margin-bottom:16px;">
+      <span>Quick answers. Tap a question to expand it.</span>
+    </div>
+
+    <div id="faqList"></div>
+
+    <button class="modal-secondary-btn" id="faqReplayTutorialBtn" type="button" style="width:100%; margin-top:4px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+      REPLAY FULL TUTORIAL
+    </button>
+  </div>
+</div>
+
+<!-- ============ ONBOARDING TUTORIAL ============ -->
+<div id="tutOverlay">
+  <div id="tutSpotlight"></div>
+  <div id="tutArrow"></div>
+  <div id="tutCard">
+    <div class="tut-head">
+      <svg viewBox="0 0 80 80">
+        <ellipse cx="16" cy="26" rx="10" ry="10.5" fill="#77613f"/>
+        <ellipse cx="64" cy="26" rx="10" ry="10.5" fill="#77613f"/>
+        <ellipse cx="16" cy="27.5" rx="5.2" ry="5.6" fill="#2a2117"/>
+        <ellipse cx="64" cy="27.5" rx="5.2" ry="5.6" fill="#2a2117"/>
+        <ellipse cx="40" cy="46" rx="28" ry="25" fill="#c9b384"/>
+        <path d="M17 38c6-9 16-13 23-13s17 4 23 13c-3 9-14 15-23 15s-20-6-23-15z" fill="#2c2416"/>
+        <ellipse cx="30" cy="40" rx="6" ry="7" fill="#fbf6e8"/>
+        <ellipse cx="50" cy="40" rx="6" ry="7" fill="#fbf6e8"/>
+        <circle cx="32" cy="41.5" r="3.8" fill="#181410"/>
+        <circle cx="48" cy="41.5" r="3.8" fill="#181410"/>
+        <circle cx="33.5" cy="39.5" r="1.4" fill="#fff"/>
+        <circle cx="49.5" cy="39.5" r="1.4" fill="#fff"/>
+        <ellipse cx="40" cy="54" rx="12" ry="9" fill="#f0e6c9"/>
+        <ellipse cx="40" cy="50" rx="3.4" ry="2.8" fill="#241c13"/>
+        <path d="M40 53.5v3" stroke="#241c13" stroke-width="1.4"/>
+        <path d="M31 57c4 4.5 14 4.5 18 0" stroke="#241c13" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="tut-progress" id="tutProgress">STEP 1 OF 11</div>
+    </div>
+    <h3 class="tut-title" id="tutTitle"></h3>
+    <p class="tut-text" id="tutText"></p>
+    <div class="tut-dots" id="tutDots"></div>
+    <div class="tut-actions">
+      <button class="tut-skip" id="tutSkip" type="button">Skip tour</button>
+      <div class="tut-nav">
+        <button class="tut-back" id="tutBack" type="button">Back</button>
+        <button class="tut-next" id="tutNext" type="button">Next</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -994,12 +1146,16 @@
     runCheck();
   });
 
-  // First run: show settings automatically
+  // First run: settings now open automatically once the onboarding tour
+  // finishes (see the tutorial engine below), rather than immediately —
+  // that way new users see the whole app before being asked for numbers.
   let hasSettings = false;
   try{ hasSettings = !!localStorage.getItem('toc_settings'); }catch(e){}
-  if(!hasSettings){
-    document.getElementById('settingsBtn').click();
-  }
+  window.__tocOpenSettingsIfNeeded = function(){
+    if(!hasSettings){
+      document.getElementById('settingsBtn').click();
+    }
+  };
 
   // ---------- Calculation ----------
   function num(id){ const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; }
@@ -1548,6 +1704,374 @@
   activateTab(lastTab);
   updateIcPreview();
   runCheck();
+})();
+</script>
+
+<!-- ============ TUTORIAL ENGINE + FAQ ============ -->
+<script>
+(function(){
+  // ---------- FAQ content (doubles as the "broken down" quick-help version
+  // of the full tutorial, for one-off questions) ----------
+  const FAQ_ITEMS = [
+    {
+      q: 'What do CASH and TRASH mean?',
+      a: "CASH means the offer clears your target pay per hour after gas — TRASH means it doesn't. Rocco compares the offer's net $/hr against the target you set in Settings."
+    },
+    {
+      q: 'How do I use the mic / voice entry?',
+      a: 'Tap "TAP TO SPEAK" and read the offer out loud — time, miles, and pay. It fills in whatever it recognizes for the tab you\'re on, then calculates automatically. Each tap starts a fresh listening session.'
+    },
+    {
+      q: 'Which fields do I actually need to fill in?',
+      a: "Just the ones marked required at the top of each tab — usually estimated time, miles, and the offer amount. Everything under \"+ More details\" is optional and only sharpens the math."
+    },
+    {
+      q: 'What does "+ More details" add?',
+      a: "Extras like return-trip miles, or platform-specific settings (like Instacart's shopping speed and driving speed). These aren't required, but including them gives a more accurate $/hr."
+    },
+    {
+      q: 'How is fuel cost calculated?',
+      a: "Fuel cost = miles driven × (gas price ÷ your vehicle's MPG). You set your MPG and gas price once in Settings, and every calculation uses that rate automatically."
+    },
+    {
+      q: "What's the difference between Net $/hr and Gross $/hr?",
+      a: "Gross $/hr is just the offer divided by time. Net $/hr subtracts your estimated fuel cost first — it's the number that matters most, and the one CASH/TRASH is based on."
+    },
+    {
+      q: 'How do I change my target pay, MPG, or gas price?',
+      a: 'Tap the gear icon in the top right to open Settings. Adjust your $/hr target, MPG, and gas price there, then tap SAVE.'
+    },
+    {
+      q: 'How do I switch between light and dark mode?',
+      a: 'Tap the sun/moon icon next to the gear icon in the top right. It remembers your choice next time you open the app.'
+    },
+    {
+      q: 'How do I clear the fields on a tab?',
+      a: 'Tap the trash-can icon next to CALCULATE. It only clears the fields on the tab you\'re currently viewing.'
+    },
+    {
+      q: 'Can I see the full tutorial again?',
+      a: 'Yes — open Settings and tap "REPLAY TUTORIAL" at the bottom, or tap it right here at the bottom of this FAQ.'
+    }
+  ];
+
+  const faqList = document.getElementById('faqList');
+  FAQ_ITEMS.forEach((item, i)=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'faq-item';
+    wrap.innerHTML =
+      '<button class="faq-q" type="button">' +
+        '<span>'+item.q+'</span>' +
+        '<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
+      '</button>' +
+      '<div class="faq-a">'+item.a+'</div>';
+    wrap.querySelector('.faq-q').addEventListener('click', ()=>{
+      wrap.classList.toggle('open');
+    });
+    faqList.appendChild(wrap);
+  });
+
+  const faqModal = document.getElementById('faqModal');
+  const settingsModalEl = document.getElementById('settingsModal');
+  document.getElementById('openFaqBtn').addEventListener('click', ()=>{
+    settingsModalEl.classList.remove('show');
+    faqModal.classList.add('show');
+  });
+  document.getElementById('closeFaqBtn').addEventListener('click', ()=>{
+    faqModal.classList.remove('show');
+  });
+  faqModal.addEventListener('click', (e)=>{
+    if(e.target === faqModal) faqModal.classList.remove('show');
+  });
+
+  // ---------- Tutorial engine ----------
+  const overlay = document.getElementById('tutOverlay');
+  const spotlight = document.getElementById('tutSpotlight');
+  const arrow = document.getElementById('tutArrow');
+  const card = document.getElementById('tutCard');
+  const dotsEl = document.getElementById('tutDots');
+  const progressEl = document.getElementById('tutProgress');
+  const titleEl = document.getElementById('tutTitle');
+  const textEl = document.getElementById('tutText');
+  const backBtn = document.getElementById('tutBack');
+  const nextBtn = document.getElementById('tutNext');
+  const skipBtn = document.getElementById('tutSkip');
+
+  // Steps reference the app's real elements. Each step can optionally open
+  // the "more details" panel or momentarily reveal a demo result so Rocco
+  // has something real to point at, via onEnter/onExit hooks.
+  function openMorePanel(){
+    const btn = document.querySelector('.more-toggle[data-more="spark"]');
+    const panel = document.getElementById('more-spark');
+    if(panel && !panel.classList.contains('open')){
+      panel.classList.add('open');
+      if(btn){ btn.classList.add('open'); btn.querySelector('span').textContent = '– MORE DETAILS (OPTIONAL)'; }
+    }
+  }
+  function closeMorePanel(){
+    const btn = document.querySelector('.more-toggle[data-more="spark"]');
+    const panel = document.getElementById('more-spark');
+    if(panel && panel.classList.contains('open')){
+      panel.classList.remove('open');
+      if(btn){ btn.classList.remove('open'); btn.querySelector('span').textContent = '+ MORE DETAILS (OPTIONAL)'; }
+    }
+  }
+  let demoResultForced = false;
+  function showDemoResult(){
+    const resultEl = document.getElementById('result');
+    if(!resultEl.classList.contains('show')){
+      demoResultForced = true;
+      resultEl.classList.add('show');
+      document.getElementById('verdictCard').classList.add('cash');
+    }
+  }
+  function hideDemoResult(){
+    if(demoResultForced){
+      const resultEl = document.getElementById('result');
+      resultEl.classList.remove('show');
+      document.getElementById('verdictCard').classList.remove('cash');
+      demoResultForced = false;
+    }
+  }
+
+  const STEPS = [
+    {
+      target: null,
+      title: "Hey, I'm Rocco!",
+      text: "I dig through gig offers so you don't waste your time. Let me show you around Trash or Cash in a few quick steps."
+    },
+    {
+      target: '#tabs',
+      title: 'Pick your platform',
+      text: "Start here. Choose which app you're driving for — Spark, Instacart, Shipt, or Food Delivery (DoorDash, Uber Eats, Grubhub, etc.) — the fields below change to match."
+    },
+    {
+      target: '#micBtn',
+      title: 'Tap to speak',
+      text: "In a hurry? Tap this and read the offer out loud — time, miles, and pay — and I'll fill in the fields for you."
+    },
+    {
+      target: '#panel-spark .required-block',
+      title: 'The must-haves',
+      text: "These are the only fields you really need — how long the offer says it'll take, how many miles, and what it pays."
+    },
+    {
+      target: '.more-toggle[data-more="spark"]',
+      onEnter: openMorePanel,
+      onExit: closeMorePanel,
+      title: 'More details (optional)',
+      text: "Got a return trip? Tap here to add it in. It's never required, but it sharpens the math."
+    },
+    {
+      target: '#calculateBtn',
+      title: 'Calculate',
+      text: "Once your numbers are in, tap CALCULATE — or if you used the mic, I'll do it automatically as soon as you finish speaking."
+    },
+    {
+      target: '#clearFieldsBtn',
+      title: 'Clear fields',
+      text: "Done with this offer? Tap here to wipe the current tab's fields for the next one."
+    },
+    {
+      target: '#verdictCard',
+      onEnter: showDemoResult,
+      onExit: hideDemoResult,
+      title: 'CASH or TRASH',
+      text: "This is the verdict. CASH means the offer meets or beats your target pay per hour after gas — TRASH means it falls short. The stats below break down net pay, gross pay, fuel cost, and time."
+    },
+    {
+      target: '#settingsBtn',
+      title: 'Your numbers',
+      text: "Tap the gear to set your target $/hr, your vehicle's MPG, and gas price. I'll remember them for every calculation — and you can always come back here for this tutorial or frequently asked questions."
+    },
+    {
+      target: '#themeBtn',
+      title: 'Light or dark',
+      text: 'Tap this anytime to switch between light and dark mode.'
+    },
+    {
+      target: null,
+      title: "That's the tour!",
+      text: "Find me again anytime under Settings — REPLAY TUTORIAL for the full walkthrough, or HELP & FAQ for quick answers. Let's get your numbers set up."
+    }
+  ];
+
+  let stepIndex = 0;
+  let active = false;
+  let resizeHandlerBound = false;
+
+  function buildDots(){
+    dotsEl.innerHTML = '';
+    STEPS.forEach((s, i)=>{
+      const d = document.createElement('span');
+      if(i === stepIndex) d.className = 'on';
+      dotsEl.appendChild(d);
+    });
+  }
+
+  function clampCardWidth(){
+    return Math.min(300, window.innerWidth * 0.88);
+  }
+
+  function positionForStep(){
+    const step = STEPS[stepIndex];
+    const targetEl = step.target ? document.querySelector(step.target) : null;
+    const pad = 8;
+
+    if(targetEl){
+      const rect = targetEl.getBoundingClientRect();
+      spotlight.classList.add('tut-show');
+      spotlight.style.top = (rect.top - pad) + 'px';
+      spotlight.style.left = (rect.left - pad) + 'px';
+      spotlight.style.width = (rect.width + pad*2) + 'px';
+      spotlight.style.height = (rect.height + pad*2) + 'px';
+
+      const cardWidth = clampCardWidth();
+      card.style.width = cardWidth + 'px';
+      const cardHeight = card.offsetHeight || 200;
+
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const placeBelow = spaceBelow >= (cardHeight + 26) || spaceBelow >= spaceAbove;
+
+      let top;
+      if(placeBelow){
+        top = rect.bottom + pad + 16;
+        arrow.classList.remove('arrow-bottom'); arrow.classList.add('arrow-top');
+      } else {
+        top = rect.top - pad - 16 - cardHeight;
+        arrow.classList.remove('arrow-top'); arrow.classList.add('arrow-bottom');
+      }
+      top = Math.max(10, Math.min(top, window.innerHeight - cardHeight - 10));
+
+      let left = rect.left + rect.width/2 - cardWidth/2;
+      left = Math.max(10, Math.min(left, window.innerWidth - cardWidth - 10));
+
+      card.style.top = top + 'px';
+      card.style.left = left + 'px';
+
+      let arrowLeft = rect.left + rect.width/2 - 8;
+      arrowLeft = Math.max(left + 14, Math.min(arrowLeft, left + cardWidth - 30));
+      arrow.style.left = arrowLeft + 'px';
+      arrow.style.top = (placeBelow ? (rect.bottom + pad + 8) : (rect.top - pad - 22)) + 'px';
+      arrow.classList.add('tut-show');
+    } else {
+      spotlight.classList.remove('tut-show');
+      spotlight.style.width = '0px';
+      spotlight.style.height = '0px';
+      spotlight.style.top = '50%';
+      spotlight.style.left = '50%';
+      arrow.classList.remove('tut-show');
+
+      const cardWidth = clampCardWidth();
+      card.style.width = cardWidth + 'px';
+      const cardHeight = card.offsetHeight || 200;
+      card.style.left = ((window.innerWidth - cardWidth) / 2) + 'px';
+      card.style.top = Math.max(10, (window.innerHeight - cardHeight) / 2) + 'px';
+    }
+  }
+
+  function renderStep(){
+    const step = STEPS[stepIndex];
+    titleEl.textContent = step.title;
+    textEl.textContent = step.text;
+    progressEl.textContent = 'STEP ' + (stepIndex+1) + ' OF ' + STEPS.length;
+    backBtn.disabled = stepIndex === 0;
+    nextBtn.textContent = stepIndex === STEPS.length - 1 ? "LET'S GO!" : 'NEXT';
+    buildDots();
+
+    if(step.target){
+      const targetEl = document.querySelector(step.target);
+      if(targetEl) targetEl.scrollIntoView({behavior:'smooth', block:'center'});
+    }
+    card.classList.remove('tut-show');
+    // Let layout settle (scroll + any onEnter DOM changes) before measuring.
+    setTimeout(()=>{
+      positionForStep();
+      card.classList.add('tut-show');
+    }, 260);
+  }
+
+  function goToStep(newIndex){
+    const prevStep = STEPS[stepIndex];
+    if(prevStep && prevStep.onExit) prevStep.onExit();
+    stepIndex = newIndex;
+    const nextStep = STEPS[stepIndex];
+    if(nextStep && nextStep.onEnter) nextStep.onEnter();
+    renderStep();
+  }
+
+  function startTutorial(){
+    // Always start from a known, predictable state.
+    try{ document.querySelector('.tab[data-tab="spark"]').click(); }catch(e){}
+    document.getElementById('settingsModal').classList.remove('show');
+    document.getElementById('faqModal').classList.remove('show');
+    stepIndex = 0;
+    active = true;
+    overlay.classList.add('tut-active');
+    document.body.style.overflow = 'hidden';
+    const first = STEPS[0];
+    if(first.onEnter) first.onEnter();
+    renderStep();
+
+    if(!resizeHandlerBound){
+      resizeHandlerBound = true;
+      window.addEventListener('resize', ()=>{ if(active) positionForStep(); });
+      window.addEventListener('scroll', ()=>{ if(active) positionForStep(); }, {passive:true});
+    }
+  }
+
+  function endTutorial(markSeen, forceOpenSettings){
+    const step = STEPS[stepIndex];
+    if(step && step.onExit) step.onExit();
+    active = false;
+    overlay.classList.remove('tut-active');
+    spotlight.classList.remove('tut-show');
+    arrow.classList.remove('tut-show');
+    card.classList.remove('tut-show');
+    document.body.style.overflow = '';
+    if(markSeen){
+      try{ localStorage.setItem('toc_tutorial_seen', '1'); }catch(e){}
+    }
+    if(forceOpenSettings){
+      // Finishing the tour always drops the user straight into Settings so
+      // they can enter their $/hr target, MPG, and gas price right away.
+      document.getElementById('settingsBtn').click();
+    } else if(markSeen && window.__tocOpenSettingsIfNeeded){
+      window.__tocOpenSettingsIfNeeded();
+    }
+  }
+
+  nextBtn.addEventListener('click', ()=>{
+    if(stepIndex === STEPS.length - 1){
+      endTutorial(true, true);
+    } else {
+      goToStep(stepIndex + 1);
+    }
+  });
+  backBtn.addEventListener('click', ()=>{
+    if(stepIndex > 0) goToStep(stepIndex - 1);
+  });
+  skipBtn.addEventListener('click', ()=> endTutorial(true));
+
+  document.getElementById('replayTutorialBtn').addEventListener('click', startTutorial);
+  document.getElementById('faqReplayTutorialBtn').addEventListener('click', ()=>{
+    faqModal.classList.remove('show');
+    startTutorial();
+  });
+
+  // First-ever visit: run the tour, then (as before) prompt for settings.
+  // Append ?tutorial=1 to the URL to force the tour to run for testing,
+  // even if it's already been marked seen in this browser.
+  let tutorialSeen = false;
+  try{ tutorialSeen = !!localStorage.getItem('toc_tutorial_seen'); }catch(e){}
+  let forceTutorial = false;
+  try{ forceTutorial = /(?:^|[?&])tutorial=1(?:&|$)/.test(window.location.search); }catch(e){}
+  if(!tutorialSeen || forceTutorial){
+    setTimeout(startTutorial, 300);
+  } else if(window.__tocOpenSettingsIfNeeded){
+    window.__tocOpenSettingsIfNeeded();
+  }
 })();
 </script>
 </body>

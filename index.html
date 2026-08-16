@@ -902,8 +902,7 @@
 
     <div class="modal-secondary-row">
       <button class="modal-secondary-btn" id="replayTutorialBtn" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
-        REPLAY TUTORIAL
+        TUTORIAL
       </button>
       <button class="modal-secondary-btn" id="openFaqBtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
@@ -1282,15 +1281,17 @@
 
     resultEl.classList.add('show');
     saveFields();
+
+    // Always bring the verdict into view and give it a pulse — whether it
+    // just became available, updated live as the last field was filled in,
+    // or came from an explicit CALCULATE tap. Nobody should have to go
+    // hunting for CASH or TRASH on a small screen.
+    card.scrollIntoView({behavior:'smooth', block:'center'});
+    card.classList.add('pulse');
   }
 
   function calculateNow(){
     runCheck();
-    const resultEl = document.getElementById('result');
-    if(!resultEl.classList.contains('show')) return; // nothing to show yet — fields incomplete
-    const card = document.getElementById('verdictCard');
-    card.scrollIntoView({behavior:'smooth', block:'center'});
-    card.classList.add('pulse');
   }
 
   // ---------- Voice entry (minimal — no sound, no flash, no full-screen) ----------
@@ -1649,26 +1650,24 @@
     });
   }
 
-  // Save fields as the user types, but don't recalculate anything —
-  // that only happens on an explicit CALCULATE tap now, so there's no
-  // timing guesswork about whether the user is "done" entering a value.
+  // Live auto-calculate: whichever fields are still empty for the ACTIVE
+  // tab's required set (per-platform — Spark/Shipt/Food need time+miles+pay,
+  // Instacart needs items+miles+offer, etc., all handled by currentCalc()
+  // already knowing what's required per tab) determine whether a verdict
+  // can show. As soon as they're all filled — whether typed by hand, filled
+  // by voice, or a mix across several separate mic taps (e.g. switching back
+  // and forth to a gig app on a single phone to read off each detail) — the
+  // verdict appears on its own, no explicit CALCULATE tap needed. A short
+  // debounce avoids flickering a stale/partial verdict mid-keystroke.
+  let liveCheckTimer = null;
+  function scheduleLiveCheck(){
+    clearTimeout(liveCheckTimer);
+    liveCheckTimer = setTimeout(runCheck, 250);
+  }
   FIELD_IDS.forEach(id=>{
     const el = document.getElementById(id);
     if(!el) return;
-    el.addEventListener('input', saveFields);
-  });
-
-  // "More Details" fields are optional refinements you often add AFTER
-  // you've already hit Calculate and are looking at a verdict (e.g. typing
-  // in return miles once you know you're heading straight back). For those
-  // specific fields only, update the verdict live as you type instead of
-  // making you tap Calculate again. Required fields keep the explicit-tap
-  // behavior — that one's still the safest way to enter a fresh order.
-  const MORE_DETAILS_LIVE_FIELDS = ['spark-return', 'ic-speed', 'ic-mph', 'shipt-return'];
-  MORE_DETAILS_LIVE_FIELDS.forEach(id=>{
-    const el = document.getElementById(id);
-    if(!el) return;
-    el.addEventListener('input', runCheck);
+    el.addEventListener('input', ()=>{ saveFields(); scheduleLiveCheck(); });
   });
 
   // Instacart time preview
@@ -1726,6 +1725,10 @@
       a: "Just the ones marked required at the top of each tab — usually estimated time, miles, and the offer amount. Everything under \"+ More details\" is optional and only sharpens the math."
     },
     {
+      q: 'Do I have to tap CALCULATE?',
+      a: "No — the verdict appears automatically the moment all of a tab's required fields are filled, whether you typed them, spoke them, or filled some in one mic tap and the rest in another (handy if you're switching back and forth to a gig app on a single phone). CALCULATE just jumps you straight to it."
+    },
+    {
       q: 'What does "+ More details" add?',
       a: "Extras like return-trip miles, or platform-specific settings (like Instacart's shopping speed and driving speed). These aren't required, but including them gives a more accurate $/hr."
     },
@@ -1751,7 +1754,7 @@
     },
     {
       q: 'Can I see the full tutorial again?',
-      a: 'Yes — open Settings and tap "REPLAY TUTORIAL" at the bottom, or tap it right here at the bottom of this FAQ.'
+      a: 'Yes — open Settings and tap "TUTORIAL" at the bottom, or tap it right here at the bottom of this FAQ.'
     }
   ];
 
@@ -1838,7 +1841,7 @@
     {
       target: null,
       title: "Hey, I'm Rocco!",
-      text: "I dig through gig offers so you don't waste your time. Let me show you around Trash or Cash in a few quick steps."
+      text: "I dig into a gig offer and tell you if it's actually worth taking. Feed me the details and I'll instantly compare it against the $/hr you want to make — after gas — so you know right away if it's CASH or TRASH. Let me show you around in a few quick steps."
     },
     {
       target: '#tabs',
@@ -1848,7 +1851,7 @@
     {
       target: '#micBtn',
       title: 'Tap to speak',
-      text: "In a hurry? Tap this and read the offer out loud — time, miles, and pay — and I'll fill in the fields for you."
+      text: "In a hurry? Check the offer in your gig app, then come back here and tap this to read it out loud. Switch back and forth as needed — I'll hold onto what you've already told me."
     },
     {
       target: '#panel-spark .required-block',
@@ -1865,7 +1868,7 @@
     {
       target: '#calculateBtn',
       title: 'Calculate',
-      text: "Once your numbers are in, tap CALCULATE — or if you used the mic, I'll do it automatically as soon as you finish speaking."
+      text: "I calculate automatically the moment your required fields are filled — by typing, by voice, or a mix of both across a few mic taps. Tap CALCULATE if you just want to jump straight to the verdict."
     },
     {
       target: '#clearFieldsBtn',
@@ -1882,7 +1885,7 @@
     {
       target: '#settingsBtn',
       title: 'Your numbers',
-      text: "Tap the gear to set your target $/hr, your vehicle's MPG, and gas price. I'll remember them for every calculation — and you can always come back here for this tutorial or frequently asked questions."
+      text: "Tap the gear to set your target $/hr, your vehicle's MPG, and gas price. I'll remember them for every calculation, and you can always come back here to change them anytime."
     },
     {
       target: '#themeBtn',
@@ -1892,7 +1895,7 @@
     {
       target: null,
       title: "That's the tour!",
-      text: "Find me again anytime under Settings — REPLAY TUTORIAL for the full walkthrough, or HELP & FAQ for quick answers. Let's get your numbers set up."
+      text: "Find me again anytime under Settings — TUTORIAL for the full walkthrough, or HELP & FAQ for quick answers. Let's get your numbers set up."
     }
   ];
 

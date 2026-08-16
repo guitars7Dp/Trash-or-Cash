@@ -1492,28 +1492,6 @@
       }
     });
 
-    // Re-arm the mic on return. iOS Safari can leave the page's mic
-    // permission/audio session in a stale half-connected state after the
-    // app is backgrounded (switching to the gig app, another tab, etc.) —
-    // the mic button will visually flip to "listening" on the next tap,
-    // but no audio is actually reaching the recognizer. Doing a quick,
-    // silent getUserMedia grab-and-release the moment the page becomes
-    // visible again forces Safari to re-validate the permission and
-    // reconnect the underlying audio session BEFORE the user taps, so the
-    // next real tap gets a genuinely working session instead of a zombie
-    // one. This never shows a permission prompt (it was already granted
-    // once) and never touches the visible mic-button UI.
-    document.addEventListener('visibilitychange', ()=>{
-      if(!document.hidden && navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-        navigator.mediaDevices.getUserMedia({ audio: true })
-          .then(stream=>{
-            stream.getTracks().forEach(track=>track.stop());
-          })
-          .catch(()=>{ /* stay quiet — if this fails, the user's next tap
-                         will surface whatever the real issue is via the
-                         normal recognition.start() error path */ });
-      }
-    });
   }
 
   // Save fields as the user types, but don't recalculate anything —

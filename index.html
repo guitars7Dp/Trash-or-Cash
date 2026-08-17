@@ -1584,55 +1584,49 @@
   } else {
     let listening = false;
     let activeRecognition = null;
-    let hardStopTimer = null;
 
     function resetMicButton(){
       listening = false;
       activeRecognition = null;
-      clearTimeout(hardStopTimer);
       micBtn.classList.remove('listening');
       micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
     }
 
     micBtn.addEventListener('click', ()=>{
-      if(listening){
-        try{ activeRecognition && activeRecognition.abort(); }catch(e){}
-        resetMicButton();
-        return;
-      }
-      const recognition = new SpeechRec();
+      if(listening) return;
+      const recognition = new SpeechRec(); // fresh instance every tap, on purpose
       recognition.lang = 'en-US';
-      recognition.interimResults = true;
+      recognition.interimResults = false;
       recognition.maxAlternatives = 1;
       listening = true;
       activeRecognition = recognition;
       micBtn.classList.add('listening');
       micBtn.querySelector('.mic-label').textContent = 'LISTENING…';
 
-      function armHardStop(){
-        clearTimeout(hardStopTimer);
-        hardStopTimer = setTimeout(()=>{
-          try{ recognition.abort(); }catch(e){}
-          resetMicButton();
-        }, 8000);
-      }
-      armHardStop();
+      // Force it closed after 8s no matter what, so a stuck session can
+      // never sit on the mic indefinitely and duck background audio while
+      // driving. Flat one-shot timer — not re-armed on interim results.
+      const hardStopTimer = setTimeout(()=>{
+        try{ recognition.abort(); }catch(e){}
+        resetMicButton();
+      }, 8000);
 
       recognition.onresult = (e)=>{
-        armHardStop();
-        const result = e.results[e.results.length - 1];
-        if(result.isFinal){
-          applyVoiceEntry(result[0].transcript);
-          try{ recognition.abort(); }catch(e){}
-          resetMicButton();
-        }
+        const transcript = e.results[0][0].transcript;
+        applyVoiceEntry(transcript);
       };
-      recognition.onerror = ()=>{};
-      recognition.onend = resetMicButton;
+      recognition.onerror = ()=>{ /* stay quiet — onend below resets the button either way */ };
+      recognition.onend = ()=>{
+        clearTimeout(hardStopTimer);
+        resetMicButton();
+      };
       try{ recognition.start(); }
       catch(e){ resetMicButton(); }
     });
 
+    // Extra safety net: if the tab/app gets backgrounded (e.g. switching
+    // apps, or the OS tearing the page down) while a session is active,
+    // kill it immediately rather than leaving it to iOS's own cleanup.
     document.addEventListener('visibilitychange', ()=>{
       if(document.hidden && activeRecognition){
         try{ activeRecognition.abort(); }catch(e){}

@@ -1584,16 +1584,21 @@
   } else {
     let listening = false;
     let activeRecognition = null;
+    let lastError = null;
 
-    function resetMicButton(){
+    function resetMicButtonState(){
       listening = false;
       activeRecognition = null;
       micBtn.classList.remove('listening');
+    }
+    function resetMicButton(){
+      resetMicButtonState();
       micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
     }
 
     micBtn.addEventListener('click', ()=>{
       if(listening) return;
+      lastError = null;
       const recognition = new SpeechRec(); // fresh instance every tap, on purpose
       recognition.lang = 'en-US';
       recognition.interimResults = false;
@@ -1601,7 +1606,16 @@
       listening = true;
       activeRecognition = recognition;
       micBtn.classList.add('listening');
-      micBtn.querySelector('.mic-label').textContent = 'LISTENING…';
+      // On iOS — especially a home-screen standalone web app, which spins up
+      // its audio engine slower than a normal Safari tab — there's a real
+      // gap between calling start() and the mic actually capturing audio.
+      // Telling the user to speak immediately risks the first (or only)
+      // words being spoken before the engine catches up, with nothing
+      // captured and no error to show for it. So the label starts at
+      // STARTING… and only flips to LISTENING… once the engine itself
+      // confirms it has begun (onaudiostart if available, falling back to
+      // onstart), which is the actual cue to start talking.
+      micBtn.querySelector('.mic-label').textContent = 'STARTING…';
 
       // Force it closed after 8s no matter what, so a stuck session can
       // never sit on the mic indefinitely and duck background audio while
@@ -1611,14 +1625,40 @@
         resetMicButton();
       }, 8000);
 
+      recognition.onaudiostart = ()=>{
+        micBtn.querySelector('.mic-label').textContent = 'LISTENING…';
+      };
+      // Some iOS versions never fire onaudiostart reliably — onstart is a
+      // weaker signal (recognition session started, not necessarily audio
+      // flowing yet) but still an improvement over flipping the label
+      // instantly at tap-time, so it's used as a fallback only.
+      recognition.onstart = ()=>{
+        if(micBtn.querySelector('.mic-label').textContent === 'STARTING…'){
+          micBtn.querySelector('.mic-label').textContent = 'LISTENING…';
+        }
+      };
       recognition.onresult = (e)=>{
         const transcript = e.results[0][0].transcript;
         applyVoiceEntry(transcript);
       };
-      recognition.onerror = ()=>{ /* stay quiet — onend below resets the button either way */ };
+      recognition.onerror = (e)=>{
+        // TEMP DIAGNOSTIC — surfaces the real browser-reported error instead
+        // of swallowing it, so we can see exactly what's failing. Remove
+        // once the mic issue is confirmed fixed.
+        console.log('SpeechRecognition error:', e.error);
+        lastError = e.error;
+      };
       recognition.onend = ()=>{
         clearTimeout(hardStopTimer);
-        resetMicButton();
+        resetMicButtonState();
+        if(lastError){
+          micBtn.querySelector('.mic-label').textContent = 'ERR: ' + lastError;
+          setTimeout(()=>{
+            if(!listening) micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
+          }, 4000);
+        } else {
+          micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
+        }
       };
       try{ recognition.start(); }
       catch(e){ resetMicButton(); }

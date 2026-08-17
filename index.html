@@ -241,6 +241,43 @@
     text-align:center; padding:10px 6px 0;
   }
 
+  /* ---------- Watchlist badge ---------- */
+  .watch-badge{
+    display:none; align-items:center; justify-content:center; gap:10px;
+    background:#2A2410; border:1.5px solid var(--caution); border-radius:12px;
+    padding:8px 12px 8px 8px; margin:14px 0;
+  }
+  html[data-theme="light"] .watch-badge{ background:#FFF6DA; }
+  .watch-badge.show{ display:flex; }
+
+  .watch-badge .rocco-icon{ width:58px; height:54px; flex:0 0 auto; overflow:visible; }
+  .watch-badge .msg{
+    font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:13px;
+    color:var(--caution); line-height:1.25; text-align:center;
+  }
+  .watch-badge .msg span{
+    display:block; font-weight:500; font-size:11px; color:var(--muted);
+    margin-top:2px; text-align:center;
+  }
+
+  .watch-badge .magnified-eye{
+    animation: watchFocusPulse 3.4s ease-in-out infinite;
+    transform-origin: 24px 58px;
+  }
+  @keyframes watchFocusPulse{
+    0%,100%{ transform:scale(1); }
+    50%{ transform:scale(1.05); }
+  }
+  .watch-badge .glint{
+    animation: watchGlint 3.4s ease-in-out infinite;
+    transform-origin: center;
+  }
+  @keyframes watchGlint{
+    0%, 45%, 100%{ opacity:0; transform:scale(0.3); }
+    55%{ opacity:1; transform:scale(1); }
+    65%{ opacity:0; transform:scale(0.3); }
+  }
+
   /* ---------- Settings modal ---------- */
   .modal-backdrop{
     display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:50;
@@ -268,6 +305,88 @@
   }
   .derived-rate{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--caution); margin-top:6px; }
 
+  /* ---------- Settings: secondary action row (tutorial / help) ---------- */
+  .modal-secondary-row{ display:flex; gap:10px; margin-top:10px; }
+  .modal-secondary-btn{
+    flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+    padding:12px 8px; border-radius:12px; border:1.5px solid var(--line-bright);
+    background:var(--panel); color:var(--text); font-family:'IBM Plex Mono',monospace;
+    font-weight:600; font-size:11.5px; letter-spacing:0.03em; cursor:pointer;
+  }
+  .modal-secondary-btn:active{ background:var(--panel-2); border-color:var(--caution); }
+  .modal-secondary-btn svg{ width:15px; height:15px; flex-shrink:0; }
+
+  /* ---------- FAQ modal ---------- */
+  .modal-close{
+    position:absolute; top:14px; right:14px; width:32px; height:32px; border-radius:9px;
+    border:1px solid var(--line); background:var(--panel-2); color:var(--muted);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .modal-close svg{ width:16px; height:16px; }
+  .modal-pos{ position:relative; }
+  .faq-item{ border:1px solid var(--line); border-radius:12px; margin-bottom:10px; overflow:hidden; }
+  .faq-q{
+    width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--panel); border:none; padding:13px 14px; text-align:left; cursor:pointer;
+    color:var(--text); font-family:'IBM Plex Sans',sans-serif; font-weight:600; font-size:13.5px;
+  }
+  .faq-q .chev{ flex:0 0 auto; transition:transform .2s ease; color:var(--muted); }
+  .faq-item.open .faq-q .chev{ transform:rotate(180deg); }
+  .faq-a{ display:none; padding:0 14px 14px; font-size:13px; color:var(--muted); line-height:1.5; }
+  .faq-item.open .faq-a{ display:block; }
+
+  /* ---------- Onboarding tutorial ---------- */
+  #tutSpotlight{
+    position:fixed; z-index:300; pointer-events:none; border-radius:14px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,0.78);
+    border:2px solid var(--caution);
+    transition:top .28s ease, left .28s ease, width .28s ease, height .28s ease, opacity .2s ease;
+    top:50%; left:50%; width:0; height:0; opacity:0;
+  }
+  #tutSpotlight.tut-show{ opacity:1; }
+  #tutOverlay{ display:none; }
+  #tutOverlay.tut-active{ display:block; }
+  #tutCard{
+    position:fixed; z-index:302; max-width:300px; width:88vw;
+    background:var(--panel); border:1.5px solid var(--line-bright); border-radius:16px;
+    padding:16px 16px 14px; box-shadow:0 12px 34px rgba(0,0,0,0.45);
+    transition:top .28s ease, left .28s ease;
+    visibility:hidden; opacity:0;
+  }
+  #tutCard.tut-show{ visibility:visible; opacity:1; transition:top .28s ease, left .28s ease, opacity .2s ease; }
+  #tutArrow{
+    position:fixed; z-index:302; width:16px; height:16px; background:var(--panel);
+    border:1.5px solid var(--line-bright); transform:rotate(45deg);
+    visibility:hidden; opacity:0;
+  }
+  #tutArrow.tut-show{ visibility:visible; opacity:1; }
+  #tutArrow.arrow-top{ border-right:none; border-bottom:none; }
+  #tutArrow.arrow-bottom{ border-left:none; border-top:none; }
+  .tut-head{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .tut-head svg{ width:36px; height:36px; flex:0 0 auto; }
+  .tut-progress{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em;
+    color:var(--muted); text-transform:uppercase;
+  }
+  .tut-title{ font-family:'Archivo Black',sans-serif; font-size:16px; margin:0 0 6px; }
+  .tut-text{ font-size:13.5px; color:var(--muted); line-height:1.5; margin:0 0 12px; }
+  .tut-dots{ display:flex; gap:5px; margin-bottom:14px; }
+  .tut-dots span{ width:6px; height:6px; border-radius:50%; background:var(--line-bright); }
+  .tut-dots span.on{ background:var(--caution); }
+  .tut-actions{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .tut-skip{
+    background:none; border:none; color:var(--muted); font-family:'IBM Plex Sans',sans-serif;
+    font-weight:500; font-size:12.5px; letter-spacing:0.01em; cursor:pointer; padding:8px 2px;
+    text-decoration:underline;
+  }
+  .tut-nav{ display:flex; gap:8px; }
+  .tut-back, .tut-next{
+    font-family:'Archivo Black',sans-serif; font-size:12.5px; letter-spacing:0.02em;
+    border-radius:10px; padding:10px 16px; cursor:pointer;
+  }
+  .tut-back{ background:var(--panel-2); border:1.5px solid var(--line-bright); color:var(--text); }
+  .tut-back:disabled{ opacity:0.35; cursor:default; }
+  .tut-next{ background:var(--caution); border:none; color:var(--bg); }
 
 </style>
 </head>
@@ -736,6 +855,53 @@
       </div>
     </div>
 
+    <div class="watch-badge" id="watchBadge">
+      <div class="msg">I've got my eye on this one.<span>Within $3 of your target — keep it on your radar.</span></div>
+      <svg class="rocco-icon" viewBox="-8 23 84 79" fill="none">
+        <defs>
+          <linearGradient id="watchHeadGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#dfcda6"/>
+            <stop offset="100%" stop-color="#b49a70"/>
+          </linearGradient>
+          <linearGradient id="watchEarGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#8a734f"/>
+            <stop offset="100%" stop-color="#5e4c33"/>
+          </linearGradient>
+          <clipPath id="watchLensClip">
+            <circle cx="24" cy="58" r="19"/>
+          </clipPath>
+        </defs>
+
+        <g>
+          <ellipse cx="42" cy="63" rx="30" ry="27" fill="url(#watchHeadGrad)" stroke="#161717" stroke-width="2.5"/>
+          <ellipse cx="22" cy="41" rx="9.5" ry="10" fill="url(#watchEarGrad)" stroke="#161717" stroke-width="2"/>
+          <ellipse cx="59" cy="37" rx="9.5" ry="10" fill="url(#watchEarGrad)" stroke="#161717" stroke-width="2"/>
+          <ellipse cx="22" cy="42" rx="4.8" ry="5.2" fill="#2a2117"/>
+          <ellipse cx="59" cy="38" rx="4.8" ry="5.2" fill="#2a2117"/>
+          <path d="M21 59c5-9 15-12 21-12s16 3 21 12c-3 9-14 13-21 13s-16-4-21-13z" fill="#2c2416"/>
+          <ellipse cx="53" cy="58" rx="6" ry="7" fill="#fbf6e8"/>
+          <circle cx="50.5" cy="59.3" r="3.6" fill="#181410"/>
+          <circle cx="52.5" cy="57.5" r="1.1" fill="#fff"/>
+          <ellipse cx="39" cy="73" rx="10" ry="8" fill="#f0e6c9" stroke="#161717" stroke-width="1.7"/>
+          <ellipse cx="36" cy="71" rx="2.6" ry="2.2" fill="#241c13"/>
+        </g>
+
+        <g class="glass-group">
+          <ellipse cx="25" cy="60" rx="20" ry="19" fill="#000" opacity="0.16"/>
+          <g class="magnified-eye" clip-path="url(#watchLensClip)">
+            <g transform="translate(24 58) scale(2.1) translate(-24 -58)">
+              <ellipse cx="24" cy="58" rx="6" ry="7" fill="#fbf6e8"/>
+              <circle cx="21.5" cy="59.3" r="3.6" fill="#181410"/>
+              <circle cx="23.5" cy="57.5" r="1.1" fill="#fff"/>
+            </g>
+          </g>
+          <circle cx="24" cy="58" r="19" fill="rgba(255,210,63,0.05)" stroke="#FFD23F" stroke-width="3.6"/>
+          <line x1="10.5" y1="72" x2="-4" y2="98" stroke="#8a6a2a" stroke-width="6" stroke-linecap="round"/>
+          <path class="glint" d="M16 47l2.8 5.6 5.6 2.8-5.6 2.8-2.8 5.6-2.8-5.6-5.6-2.8 5.6-2.8z" fill="#fff"/>
+        </g>
+      </svg>
+    </div>
+
     <div class="stat-grid">
       <div class="stat-box"><div class="stat-label">Net $/hr</div><div class="stat-value" id="statNet">—</div></div>
       <div class="stat-box"><div class="stat-label">Gross $/hr</div><div class="stat-value" id="statGross">—</div></div>
@@ -817,16 +983,81 @@
     </div>
 
     <button class="modal-save" id="saveSettings">SAVE</button>
+
+    <div class="modal-secondary-row">
+      <button class="modal-secondary-btn" id="replayTutorialBtn" type="button">
+        TUTORIAL
+      </button>
+      <button class="modal-secondary-btn" id="openFaqBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        HELP &amp; FAQ
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HELP / FAQ MODAL ============ -->
+<div class="modal-backdrop" id="faqModal">
+  <div class="modal modal-pos">
+    <button class="modal-close" id="closeFaqBtn" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+    <h2>Help &amp; FAQ</h2>
+    <div class="modal-sub" style="margin-bottom:16px;">
+      <span>Quick answers. Tap a question to expand it.</span>
+    </div>
+
+    <div id="faqList"></div>
+
+    <button class="modal-secondary-btn" id="faqReplayTutorialBtn" type="button" style="width:100%; margin-top:4px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+      REPLAY FULL TUTORIAL
+    </button>
+  </div>
+</div>
+
+<!-- ============ ONBOARDING TUTORIAL ============ -->
+<div id="tutOverlay">
+  <div id="tutSpotlight"></div>
+  <div id="tutArrow"></div>
+  <div id="tutCard">
+    <div class="tut-head">
+      <svg viewBox="0 0 80 80">
+        <ellipse cx="16" cy="26" rx="10" ry="10.5" fill="#77613f"/>
+        <ellipse cx="64" cy="26" rx="10" ry="10.5" fill="#77613f"/>
+        <ellipse cx="16" cy="27.5" rx="5.2" ry="5.6" fill="#2a2117"/>
+        <ellipse cx="64" cy="27.5" rx="5.2" ry="5.6" fill="#2a2117"/>
+        <ellipse cx="40" cy="46" rx="28" ry="25" fill="#c9b384"/>
+        <path d="M17 38c6-9 16-13 23-13s17 4 23 13c-3 9-14 15-23 15s-20-6-23-15z" fill="#2c2416"/>
+        <ellipse cx="30" cy="40" rx="6" ry="7" fill="#fbf6e8"/>
+        <ellipse cx="50" cy="40" rx="6" ry="7" fill="#fbf6e8"/>
+        <circle cx="32" cy="41.5" r="3.8" fill="#181410"/>
+        <circle cx="48" cy="41.5" r="3.8" fill="#181410"/>
+        <circle cx="33.5" cy="39.5" r="1.4" fill="#fff"/>
+        <circle cx="49.5" cy="39.5" r="1.4" fill="#fff"/>
+        <ellipse cx="40" cy="54" rx="12" ry="9" fill="#f0e6c9"/>
+        <ellipse cx="40" cy="50" rx="3.4" ry="2.8" fill="#241c13"/>
+        <path d="M40 53.5v3" stroke="#241c13" stroke-width="1.4"/>
+        <path d="M31 57c4 4.5 14 4.5 18 0" stroke="#241c13" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+      </svg>
+      <div class="tut-progress" id="tutProgress">STEP 1 OF 11</div>
+    </div>
+    <h3 class="tut-title" id="tutTitle"></h3>
+    <p class="tut-text" id="tutText"></p>
+    <div class="tut-dots" id="tutDots"></div>
+    <div class="tut-actions">
+      <button class="tut-skip" id="tutSkip" type="button">Skip tour</button>
+      <div class="tut-nav">
+        <button class="tut-back" id="tutBack" type="button">Back</button>
+        <button class="tut-next" id="tutNext" type="button">Next</button>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
 (function(){
   // ---------- Theme (light/dark) ----------
-  // Colors are applied as inline custom properties directly via JS rather than
-  // relying on an html[data-theme] CSS selector cascade, since some constrained
-  // preview/webview contexts (link previews, quick-look style renderers) don't
-  // reliably re-apply attribute-selector rules even though they do run JS.
   const THEMES = {
     dark: {
       bg:'#131313', panel:'#1C1C1C', panel2:'#232323', line:'#383838', lineBright:'#4a4a4a',
@@ -870,7 +1101,7 @@
   });
 
   const DEFAULTS = { threshold:25, mpg:25, gas:3.50 };
-  const CONSTANTS = { icSpeed:150, icMph:40, sparkReturnMph:40 }; // generic fallbacks — never persisted, always current
+  const CONSTANTS = { icSpeed:150, icMph:40, sparkReturnMph:40 };
   let settings = loadSettings();
 
   function loadSettings(){
@@ -878,8 +1109,6 @@
       const raw = localStorage.getItem('toc_settings');
       if(raw){
         const stored = JSON.parse(raw);
-        // Only pull the three user-editable keys. Ignore any legacy icSpeed/icMph
-        // from older saves so code updates to those defaults always take effect.
         return {
           threshold: typeof stored.threshold === 'number' ? stored.threshold : DEFAULTS.threshold,
           mpg: typeof stored.mpg === 'number' ? stored.mpg : DEFAULTS.mpg,
@@ -994,19 +1223,17 @@
     runCheck();
   });
 
-  // First run: show settings automatically
   let hasSettings = false;
   try{ hasSettings = !!localStorage.getItem('toc_settings'); }catch(e){}
-  if(!hasSettings){
-    document.getElementById('settingsBtn').click();
-  }
+  window.__tocOpenSettingsIfNeeded = function(){
+    if(!hasSettings){
+      document.getElementById('settingsBtn').click();
+    }
+  };
 
   // ---------- Calculation ----------
   function num(id){ const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; }
 
-  // Estimated time is entered as separate hours/minutes fields so nobody has
-  // to convert something like "1 hr 20 min" into 80 in their head while
-  // driving. Blank hours = 0. Both blank = no time entered at all.
   function numTime(hrId, minId){
     const hrEl = document.getElementById(hrId), minEl = document.getElementById(minId);
     const hrRaw = hrEl ? hrEl.value : '', minRaw = minEl ? minEl.value : '';
@@ -1020,10 +1247,6 @@
     if(time===null || miles===null || offer===null || time<=0) return null;
     const returnMiles = num('spark-return') || 0;
     const fuel = (miles + returnMiles) * costPerMile();
-    // Spark's own time estimate only covers the delivery route itself — it has
-    // no idea where you're driving from or back to. Return miles pays for gas
-    // above, but it also costs real minutes that the offer's clock never counted,
-    // so we add that drive time here using an assumed average speed.
     const returnHrs = returnMiles / CONSTANTS.sparkReturnMph;
     const hrs = (time/60) + returnHrs;
     return { gross: offer/hrs, net:(offer-fuel)/hrs, fuel, hrs, offer };
@@ -1032,10 +1255,10 @@
   function calcInstacart(){
     const items = num('ic-items'), offer = num('ic-offer'), miles = num('ic-miles');
     if(items===null || offer===null || miles===null) return null;
-    const speed = num('ic-speed') || CONSTANTS.icSpeed; // seconds per item
-    const shopTime = (items * speed) / 60; // minutes
+    const speed = num('ic-speed') || CONSTANTS.icSpeed;
+    const shopTime = (items * speed) / 60;
     const mph = num('ic-mph') || CONSTANTS.icMph;
-    const driveTime = mph>0 ? (miles / mph) * 60 : 0; // minutes
+    const driveTime = mph>0 ? (miles / mph) * 60 : 0;
     const time = shopTime + driveTime;
     if(time<=0) return null;
     const fuel = miles * costPerMile();
@@ -1058,8 +1281,6 @@
     const offer = base + tip;
     const returnMiles = num('shipt-return') || 0;
     const fuel = (miles + returnMiles) * costPerMile();
-    // Same logic as Spark: Shipt's own time estimate only covers the delivery
-    // route itself, so return miles cost real minutes on top of the fuel cost.
     const returnHrs = returnMiles / CONSTANTS.sparkReturnMph;
     const hrs = (time/60) + returnHrs;
     return { gross: offer/hrs, net:(offer-fuel)/hrs, fuel, hrs, offer };
@@ -1095,8 +1316,7 @@
     const diff = Math.abs(r.net - settings.threshold);
     sub.textContent = fmtHr(r.net) + ' net — ' + (isCash ? 'above' : 'below') + ' your $'+settings.threshold+' target by '+fmtMoney(diff)+'/hr';
 
-    // tilt bar: map net vs threshold to a -50%..+50% fill from center
-    const range = 20; // dollars of spread mapped to full bar
+    const range = 20;
     let pct = ((r.net - settings.threshold) / range) * 50;
     pct = Math.max(-50, Math.min(50, pct));
     const fill = document.getElementById('tiltFill');
@@ -1116,33 +1336,31 @@
     document.getElementById('statTime').textContent = (r.hrs*60).toFixed(0)+' min';
 
     const breakeven = document.getElementById('breakevenNote');
+    const watchBadge = document.getElementById('watchBadge');
+    const WATCH_THRESHOLD = 3;
     if(!isCash){
       const needed = settings.threshold * r.hrs + r.fuel;
       breakeven.textContent = "You'd need "+fmtMoney(needed)+" to clear your target on this one.";
+      const gap = needed - r.offer;
+      watchBadge.classList.toggle('show', gap > 0 && gap <= WATCH_THRESHOLD);
     } else {
       const cushion = r.offer - (settings.threshold * r.hrs + r.fuel);
-      breakeven.textContent = "You're "+fmtMoney(cushion)+" above what you'd need to hit target.";
+      breakeven.textContent = "You're "+fmtMoney(cushion)+" above what you'd need to hit your target.";
+      watchBadge.classList.remove('show');
     }
 
     resultEl.classList.add('show');
     saveFields();
-  }
 
-  function calculateNow(){
-    runCheck();
-    const resultEl = document.getElementById('result');
-    if(!resultEl.classList.contains('show')) return; // nothing to show yet — fields incomplete
-    const card = document.getElementById('verdictCard');
     card.scrollIntoView({behavior:'smooth', block:'center'});
     card.classList.add('pulse');
   }
 
-  // ---------- Voice entry (minimal — no sound, no flash, no full-screen) ----------
-  // Speak one utterance, it fills whatever fields it can recognize for the
-  // active tab, then calculates automatically. A fresh SpeechRecognition
-  // instance is created per tap (not reused) — iOS Safari's implementation
-  // has a known issue where a reused instance stops working after the
-  // first use, so each tap starts clean.
+  function calculateNow(){
+    runCheck();
+  }
+
+  // ---------- Voice entry ----------
   const ONES_WORDS = { zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9,
     ten:10, eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16, seventeen:17, eighteen:18, nineteen:19 };
   const TENS_WORDS = { twenty:20, thirty:30, forty:40, fifty:50, sixty:60, seventy:70, eighty:80, ninety:90 };
@@ -1164,21 +1382,11 @@
     return t;
   }
 
-  function setFieldFromMatch(id, match){
-    if(!match) return;
-    const el = document.getElementById(id);
-    if(el) el.value = match[1];
-  }
   function setVal(id, value){
     const el = document.getElementById(id);
     if(el && value !== undefined && value !== null) el.value = value;
   }
 
-  // No real gig payout — base pay, tip, or a single-field offer amount —
-  // ever runs into four figures. If voice parsing ever hands back a number
-  // that high, it's a sign two spoken amounts got misread as one (like an
-  // unmarked "twenty five forty four" landing as a bare 2544), not a real
-  // order. Discard it rather than silently filling in a number nobody said.
   const MAX_PLAUSIBLE_PAY = 999;
   function plausiblePay(val){
     if(val === null || val === undefined || val === '') return null;
@@ -1187,17 +1395,6 @@
     return val;
   }
 
-  // iOS Safari's own speech engine sometimes auto-formats a spoken dollar
-  // amount followed shortly by ANY other number as a single currency value
-  // with cents (e.g. "forty five dollars, thirteen miles" arrives as
-  // "$45.13 miles" before our parsing ever sees it) — regardless of which
-  // field that trailing number was actually meant for. The fingerprint of
-  // that corruption is specific: a decimal dollar match with a field
-  // keyword sitting directly against it — no digit, no gap. A genuine
-  // spoken cents amount never has a field word bolted straight onto the
-  // decimal like that, so this checks every keyword that could plausibly
-  // follow the offer on the active tab, in order from most to least
-  // specific, and recovers the split without risking a real cents value.
   const TAB_TAIL_PATTERNS = {
     spark: [
       { re:/^\s*,?\s*(?:return(?:ed)?\s*(?:trip\s*)?miles?|miles?\s*return(?:ed)?)\b/, kind:'return' },
@@ -1235,9 +1432,6 @@
     return null;
   }
 
-  // Shared by every tab's voice parsing: pulls hours and minutes out of the
-  // text (removing the hours portion as it goes, same as before), leaving
-  // the rest for whatever field-specific matches come next.
   function extractHourAndTime(text){
     const hourM = text.match(/(\d+(?:\.\d+)?)\s*(?:hours|hour|hrs|hr)\b/);
     const remaining = hourM ? text.replace(hourM[0], ' ') : text;
@@ -1245,19 +1439,12 @@
     return { hourM, timeM, remaining };
   }
 
-  // Shared by Spark and Shipt, the two tabs with a return-miles field.
-  // Removes the return-miles match from the text as it goes, same as
-  // before, so the plain "miles" search that follows doesn't double-count it.
   function extractReturnMiles(text){
     const returnM = text.match(/(\d+(?:\.\d+)?)\s*(?:return(?:ed)?\s*(?:trip\s*)?miles?|miles?\s*return(?:ed)?)\b/);
     const remaining = returnM ? text.replace(returnM[0], ' ') : text;
     return { returnM, remaining };
   }
 
-  // Shared by every tab: only touch the hour/minute fields at all if some
-  // piece of time was actually spoken this utterance. When it was, fill
-  // whichever part was recognized and clear the other, rather than leaving
-  // a stale value from a previous order.
   function applyTimeFields(hrId, minId, timeVal, hourVal){
     if(timeVal !== null || hourVal !== null){
       setVal(minId, timeVal !== null ? timeVal : '');
@@ -1340,13 +1527,6 @@
       const { hourM, timeM, remaining: afterHour } = extractHourAndTime(remaining);
       const { returnM, remaining: afterReturn } = extractReturnMiles(afterHour);
       const milesM = afterReturn.match(/(\d+(?:\.\d+)?)\s*miles?\b/);
-      // Step 1: check for a fold first. If the phone's own speech-to-text
-      // glued two spoken amounts into one decimal before we ever see the
-      // text (e.g. "44 dollars, 11 tip" transcribed as "$44.11 tip"),
-      // recoverFoldedOffer splits that back into base pay + whichever
-      // field the tail word points to. This has to run before any keyword
-      // search below, since by the time the text reaches us the two
-      // amounts are already a single token — nothing else can un-merge it.
       const baseM = t.match(/(\d+(?:\.\d+)?)\s*dollars?\b/);
       const recovered = recoverFoldedOffer(t, baseM, 'shipt');
 
@@ -1368,23 +1548,10 @@
       }
 
       if(tipVal === null){
-        // Step 2: no fold covered the tip. The word "tip" is unambiguous —
-        // nobody says "tip" to mean base pay — so find it by that keyword
-        // FIRST, before ever looking for base. This matters because if a
-        // driver says "dollars" on the tip but not on base (e.g. "twenty
-        // five forty four, eleven dollar tip"), a base search that just
-        // grabs the nearest "X dollars" would wrongly grab the tip's
-        // number instead. Searching tip first and removing it from the
-        // text means base can never accidentally claim it.
         const tipM = t.match(/(\d+(?:\.\d+)?)\s*(?:dollars?\s*)?tip\b/);
         if(tipM) tipVal = tipM[1];
 
         if(!baseFromFold){
-          // Base pay is whatever's left after removing tip. Look for it
-          // tagged with "dollars" first; if "dollars" was never said for
-          // it at all, fall back to whichever bare number remains once
-          // every other recognized field (hours, minutes, return miles,
-          // miles, tip) is stripped out.
           const searchText = tipM ? t.replace(tipM[0], ' ') : t;
           const taggedBaseM = searchText.match(/(\d+(?:\.\d+)?)\s*dollars?\b/);
           baseVal = taggedBaseM ? taggedBaseM[1] : null;
@@ -1417,67 +1584,105 @@
   } else {
     let listening = false;
     let activeRecognition = null;
-    let hardStopTimer = null;
+    let lastError = null;
 
-    function resetMicButton(){
+    function resetMicButtonState(){
       listening = false;
       activeRecognition = null;
-      clearTimeout(hardStopTimer);
       micBtn.classList.remove('listening');
+    }
+    function resetMicButton(){
+      resetMicButtonState();
       micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
     }
 
-    micBtn.addEventListener('click', ()=>{
-      if(listening){
-        // Second tap while listening = cancel immediately, don't wait on
-        // the timeout or silence detection — lets a mis-tap or mistake be
-        // restarted right away instead of stuck waiting.
-        try{ activeRecognition && activeRecognition.abort(); }catch(e){}
-        resetMicButton();
-        return;
+    micBtn.addEventListener('click', async ()=>{
+      if(listening) return;
+      lastError = null;
+      listening = true;
+      micBtn.classList.add('listening');
+      micBtn.querySelector('.mic-label').textContent = 'STARTING…';
+
+      // iOS can leave the underlying audio route to the mic stale after the
+      // app is backgrounded — SpeechRecognition's own onaudiostart/onstart
+      // can fire normally (the JS-level session believes it's running) while
+      // no real audio ever reaches it, until our own hard-stop timer cuts it
+      // off with no result and no real error. A getUserMedia grab-and-release
+      // forces iOS to re-establish that route. This differs from an earlier,
+      // unsuccessful attempt at the same idea: that one ran proactively in a
+      // visibilitychange handler and could overlap with an already-live
+      // recognition session, fighting it for the mic. This instead runs
+      // exactly once, synchronously, right here at tap-time — fully
+      // requested AND released before a SpeechRecognition instance is ever
+      // created, so there's nothing for it to compete with.
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+        stream.getTracks().forEach(t=> t.stop());
+      }catch(e){
+        // If this fails for any reason, don't block voice entry entirely —
+        // just proceed to attempt recognition directly, same as before this
+        // existed.
       }
+      if(!listening) return; // user backed out (re-tapped) while awaiting above
+
       const recognition = new SpeechRec(); // fresh instance every tap, on purpose
       recognition.lang = 'en-US';
-      // Interim results turned on purely so the safety-net timer below can
-      // tell "still actively speaking" apart from "genuinely stuck" — only
-      // the final result is ever used to fill fields.
-      recognition.interimResults = true;
+      recognition.interimResults = false;
       recognition.maxAlternatives = 1;
-      listening = true;
       activeRecognition = recognition;
-      micBtn.classList.add('listening');
-      micBtn.querySelector('.mic-label').textContent = 'LISTENING…';
+      // On iOS — especially a home-screen standalone web app, which spins up
+      // its audio engine slower than a normal Safari tab — there's a real
+      // gap between calling start() and the mic actually capturing audio.
+      // Telling the user to speak immediately risks the first (or only)
+      // words being spoken before the engine catches up, with nothing
+      // captured and no error to show for it. So the label starts at
+      // STARTING… and only flips to LISTENING… once the engine itself
+      // confirms it has begun (onaudiostart if available, falling back to
+      // onstart), which is the actual cue to start talking.
 
-      // Safety net: iOS Safari's SpeechRecognition doesn't always fire its
-      // own end event reliably, so a session could otherwise sit on the mic
-      // indefinitely and duck background audio while driving. This is NOT a
-      // cap on how long you have to speak — every interim result (i.e. any
-      // sign the recognizer is still actively hearing you) pushes the
-      // deadline back out. It only fires after 8 full seconds of genuine
-      // silence/dead air with nothing happening.
-      function armHardStop(){
-        clearTimeout(hardStopTimer);
-        hardStopTimer = setTimeout(()=>{
-          try{ recognition.abort(); }catch(e){}
-          resetMicButton();
-        }, 8000);
-      }
-      armHardStop();
+      // Force it closed after 8s no matter what, so a stuck session can
+      // never sit on the mic indefinitely and duck background audio while
+      // driving. Flat one-shot timer — not re-armed on interim results.
+      const hardStopTimer = setTimeout(()=>{
+        try{ recognition.abort(); }catch(e){}
+        resetMicButton();
+      }, 8000);
 
-      recognition.onresult = (e)=>{
-        armHardStop(); // any result — interim or final — means it's alive; extend the deadline
-        const result = e.results[e.results.length - 1];
-        if(result.isFinal){
-          applyVoiceEntry(result[0].transcript);
-          // Don't wait on iOS to release the mic on its own — we already
-          // have what we need, so shut it down immediately rather than
-          // trusting onend to fire promptly.
-          try{ recognition.abort(); }catch(e){}
-          resetMicButton();
+      recognition.onaudiostart = ()=>{
+        micBtn.querySelector('.mic-label').textContent = 'LISTENING…';
+      };
+      // Some iOS versions never fire onaudiostart reliably — onstart is a
+      // weaker signal (recognition session started, not necessarily audio
+      // flowing yet) but still an improvement over flipping the label
+      // instantly at tap-time, so it's used as a fallback only.
+      recognition.onstart = ()=>{
+        if(micBtn.querySelector('.mic-label').textContent === 'STARTING…'){
+          micBtn.querySelector('.mic-label').textContent = 'LISTENING…';
         }
       };
-      recognition.onerror = ()=>{ /* stay quiet — onend below resets the button either way */ };
-      recognition.onend = resetMicButton;
+      recognition.onresult = (e)=>{
+        const transcript = e.results[0][0].transcript;
+        applyVoiceEntry(transcript);
+      };
+      recognition.onerror = (e)=>{
+        // TEMP DIAGNOSTIC — surfaces the real browser-reported error instead
+        // of swallowing it, so we can see exactly what's failing. Remove
+        // once the mic issue is confirmed fixed.
+        console.log('SpeechRecognition error:', e.error);
+        lastError = e.error;
+      };
+      recognition.onend = ()=>{
+        clearTimeout(hardStopTimer);
+        resetMicButtonState();
+        if(lastError){
+          micBtn.querySelector('.mic-label').textContent = 'ERR: ' + lastError;
+          setTimeout(()=>{
+            if(!listening) micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
+          }, 4000);
+        } else {
+          micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
+        }
+      };
       try{ recognition.start(); }
       catch(e){ resetMicButton(); }
     });
@@ -1491,36 +1696,23 @@
         resetMicButton();
       }
     });
-
   }
 
-  // Save fields as the user types, but don't recalculate anything —
-  // that only happens on an explicit CALCULATE tap now, so there's no
-  // timing guesswork about whether the user is "done" entering a value.
+  let liveCheckTimer = null;
+  function scheduleLiveCheck(){
+    clearTimeout(liveCheckTimer);
+    liveCheckTimer = setTimeout(runCheck, 250);
+  }
   FIELD_IDS.forEach(id=>{
     const el = document.getElementById(id);
     if(!el) return;
-    el.addEventListener('input', saveFields);
+    el.addEventListener('input', ()=>{ saveFields(); scheduleLiveCheck(); });
   });
 
-  // "More Details" fields are optional refinements you often add AFTER
-  // you've already hit Calculate and are looking at a verdict (e.g. typing
-  // in return miles once you know you're heading straight back). For those
-  // specific fields only, update the verdict live as you type instead of
-  // making you tap Calculate again. Required fields keep the explicit-tap
-  // behavior — that one's still the safest way to enter a fresh order.
-  const MORE_DETAILS_LIVE_FIELDS = ['spark-return', 'ic-speed', 'ic-mph', 'shipt-return'];
-  MORE_DETAILS_LIVE_FIELDS.forEach(id=>{
-    const el = document.getElementById(id);
-    if(!el) return;
-    el.addEventListener('input', runCheck);
-  });
-
-  // Instacart time preview
   function updateIcPreview(){
     const items = num('ic-items');
     const miles = num('ic-miles');
-    const speed = num('ic-speed') || CONSTANTS.icSpeed; // seconds per item
+    const speed = num('ic-speed') || CONSTANTS.icSpeed;
     const mph = num('ic-mph') || CONSTANTS.icMph;
     const preview = document.getElementById('ic-time-preview');
     if(items){
@@ -1549,6 +1741,397 @@
   activateTab(lastTab);
   updateIcPreview();
   runCheck();
+})();
+</script>
+
+<!-- ============ TUTORIAL ENGINE + FAQ ============ -->
+<script>
+(function(){
+  const FAQ_ITEMS = [
+    {
+      q: 'What do CASH and TRASH mean?',
+      a: "CASH means the offer clears your target pay per hour after gas — TRASH means it doesn't. Rocco compares the offer's net $/hr against the target you set in Settings."
+    },
+    {
+      q: 'What does the magnifying glass badge mean?',
+      a: "When an offer is TRASH but within $3 of what you'd need to clear your target, Rocco flags it with a badge showing the exact number to watch for. Handy on Spark, where offers often bump up in small increments — you'll know the moment one hits your number without re-running the math."
+    },
+    {
+      q: 'How do I use the mic / voice entry?',
+      a: 'Tap "TAP TO SPEAK" and read the offer out loud — time, miles, and pay. It fills in whatever it recognizes for the tab you\'re on, then calculates automatically. Each tap starts a fresh listening session.'
+    },
+    {
+      q: 'Which fields do I actually need to fill in?',
+      a: "Just the ones marked required at the top of each tab — usually estimated time, miles, and the offer amount. Everything under \"+ More details\" is optional and only sharpens the math."
+    },
+    {
+      q: 'Do I have to tap CALCULATE?',
+      a: "No — the verdict appears automatically the moment all of a tab's required fields are filled, whether you typed them, spoke them, or filled some in one mic tap and the rest in another (handy if you're switching back and forth to a gig app on a single phone). CALCULATE just jumps you straight to it."
+    },
+    {
+      q: 'What does "+ More details" add?',
+      a: "Extras like return-trip miles, or platform-specific settings (like Instacart's shopping speed and driving speed). These aren't required, but including them gives a more accurate $/hr."
+    },
+    {
+      q: 'How is fuel cost calculated?',
+      a: "Fuel cost = miles driven × (gas price ÷ your vehicle's MPG). You set your MPG and gas price once in Settings, and every calculation uses that rate automatically."
+    },
+    {
+      q: "What's the difference between Net $/hr and Gross $/hr?",
+      a: "Gross $/hr is just the offer divided by time. Net $/hr subtracts your estimated fuel cost first — it's the number that matters most, and the one CASH/TRASH is based on."
+    },
+    {
+      q: 'How do I change my target pay, MPG, or gas price?',
+      a: 'Tap the gear icon in the top right to open Settings. Adjust your $/hr target, MPG, and gas price there, then tap SAVE.'
+    },
+    {
+      q: 'How do I switch between light and dark mode?',
+      a: 'Tap the sun/moon icon next to the gear icon in the top right. It remembers your choice next time you open the app.'
+    },
+    {
+      q: 'How do I clear the fields on a tab?',
+      a: 'Tap the trash-can icon next to CALCULATE. It only clears the fields on the tab you\'re currently viewing.'
+    },
+    {
+      q: 'Can I see the full tutorial again?',
+      a: 'Yes — open Settings and tap "TUTORIAL" at the bottom, or tap it right here at the bottom of this FAQ.'
+    }
+  ];
+
+  const faqList = document.getElementById('faqList');
+  FAQ_ITEMS.forEach((item, i)=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'faq-item';
+    wrap.innerHTML =
+      '<button class="faq-q" type="button">' +
+        '<span>'+item.q+'</span>' +
+        '<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
+      '</button>' +
+      '<div class="faq-a">'+item.a+'</div>';
+    wrap.querySelector('.faq-q').addEventListener('click', ()=>{
+      wrap.classList.toggle('open');
+    });
+    faqList.appendChild(wrap);
+  });
+
+  const faqModal = document.getElementById('faqModal');
+  const settingsModalEl = document.getElementById('settingsModal');
+  document.getElementById('openFaqBtn').addEventListener('click', ()=>{
+    settingsModalEl.classList.remove('show');
+    faqModal.classList.add('show');
+  });
+  document.getElementById('closeFaqBtn').addEventListener('click', ()=>{
+    faqModal.classList.remove('show');
+  });
+  faqModal.addEventListener('click', (e)=>{
+    if(e.target === faqModal) faqModal.classList.remove('show');
+  });
+
+  // ---------- Tutorial engine ----------
+  const overlay = document.getElementById('tutOverlay');
+  const spotlight = document.getElementById('tutSpotlight');
+  const arrow = document.getElementById('tutArrow');
+  const card = document.getElementById('tutCard');
+  const dotsEl = document.getElementById('tutDots');
+  const progressEl = document.getElementById('tutProgress');
+  const titleEl = document.getElementById('tutTitle');
+  const textEl = document.getElementById('tutText');
+  const backBtn = document.getElementById('tutBack');
+  const nextBtn = document.getElementById('tutNext');
+  const skipBtn = document.getElementById('tutSkip');
+
+  function openMorePanel(){
+    const btn = document.querySelector('.more-toggle[data-more="spark"]');
+    const panel = document.getElementById('more-spark');
+    if(panel && !panel.classList.contains('open')){
+      panel.classList.add('open');
+      if(btn){ btn.classList.add('open'); btn.querySelector('span').textContent = '– MORE DETAILS (OPTIONAL)'; }
+    }
+  }
+  function closeMorePanel(){
+    const btn = document.querySelector('.more-toggle[data-more="spark"]');
+    const panel = document.getElementById('more-spark');
+    if(panel && panel.classList.contains('open')){
+      panel.classList.remove('open');
+      if(btn){ btn.classList.remove('open'); btn.querySelector('span').textContent = '+ MORE DETAILS (OPTIONAL)'; }
+    }
+  }
+  let demoResultForced = false;
+  function showDemoResult(){
+    const resultEl = document.getElementById('result');
+    if(!resultEl.classList.contains('show')){
+      demoResultForced = true;
+      resultEl.classList.add('show');
+      document.getElementById('verdictCard').classList.add('cash');
+    }
+  }
+  function hideDemoResult(){
+    if(demoResultForced){
+      const resultEl = document.getElementById('result');
+      resultEl.classList.remove('show');
+      document.getElementById('verdictCard').classList.remove('cash');
+      demoResultForced = false;
+    }
+  }
+  let demoWatchForced = false;
+  function showDemoWatch(){
+    const resultEl = document.getElementById('result');
+    const badge = document.getElementById('watchBadge');
+    if(!resultEl.classList.contains('show')){
+      demoResultForced = true;
+      resultEl.classList.add('show');
+    }
+    if(!badge.classList.contains('show')){
+      demoWatchForced = true;
+      badge.classList.add('show');
+    }
+  }
+  function hideDemoWatch(){
+    if(demoWatchForced){
+      document.getElementById('watchBadge').classList.remove('show');
+      demoWatchForced = false;
+    }
+    hideDemoResult();
+  }
+
+  const STEPS = [
+    {
+      target: null,
+      title: "Hey, I'm Rocco!",
+      text: "I dig into a gig offer and tell you if it's actually worth taking. Feed me the details and I'll instantly compare it against the $/hr you want to make — after gas — so you know right away if it's CASH or TRASH. Let me show you around in a few quick steps."
+    },
+    {
+      target: '#tabs',
+      title: 'Pick your platform',
+      text: "Start here. Choose which app you're driving for — Spark, Instacart, Shipt, or Food Delivery (DoorDash, Uber Eats, Grubhub, etc.) — the fields below change to match."
+    },
+    {
+      target: '#micBtn',
+      title: 'Tap to speak',
+      text: "In a hurry? Check the offer in your gig app, then come back here and tap this to read it out loud. Switch back and forth as needed — I'll hold onto what you've already told me."
+    },
+    {
+      target: '#panel-spark .required-block',
+      title: 'The must-haves',
+      text: "These are the only fields you really need — how long the offer says it'll take, how many miles, and what it pays."
+    },
+    {
+      target: '.more-toggle[data-more="spark"]',
+      onEnter: openMorePanel,
+      onExit: closeMorePanel,
+      title: 'More details (optional)',
+      text: "Got a return trip? Tap here to add it in. It's never required, but it sharpens the math."
+    },
+    {
+      target: '#calculateBtn',
+      title: 'Calculate',
+      text: "I calculate automatically the moment your required fields are filled — by typing, by voice, or a mix of both across a few mic taps. Tap CALCULATE if you just want to jump straight to the verdict."
+    },
+    {
+      target: '#clearFieldsBtn',
+      title: 'Clear fields',
+      text: "Done with this offer? Tap here to wipe the current tab's fields for the next one."
+    },
+    {
+      target: '#verdictCard',
+      onEnter: showDemoResult,
+      onExit: hideDemoResult,
+      title: 'CASH or TRASH',
+      text: "This is the verdict. CASH means the offer meets or beats your target pay per hour after gas — TRASH means it falls short. The stats below break down net pay, gross pay, fuel cost, and time."
+    },
+    {
+      target: '#watchBadge',
+      onEnter: showDemoWatch,
+      onExit: hideDemoWatch,
+      title: "So close — I'm watching it",
+      text: "When an offer is TRASH but within $3 of your target, I'll flag it like this. Handy on Spark, where offers often bump up a bit at a time — keep an eye out for the number I'm pointing at, and grab it the moment it lands."
+    },
+    {
+      target: '#settingsBtn',
+      title: 'Your numbers',
+      text: "Tap the gear to set your target $/hr, your vehicle's MPG, and gas price. I'll remember them for every calculation, and you can always come back here to change them anytime."
+    },
+    {
+      target: '#themeBtn',
+      title: 'Light or dark',
+      text: 'Tap this anytime to switch between light and dark mode.'
+    },
+    {
+      target: null,
+      title: "That's the tour!",
+      text: "Find me again anytime under Settings — TUTORIAL for the full walkthrough, or HELP & FAQ for quick answers. Let's get your numbers set up."
+    }
+  ];
+
+  let stepIndex = 0;
+  let active = false;
+  let resizeHandlerBound = false;
+
+  function buildDots(){
+    dotsEl.innerHTML = '';
+    STEPS.forEach((s, i)=>{
+      const d = document.createElement('span');
+      if(i === stepIndex) d.className = 'on';
+      dotsEl.appendChild(d);
+    });
+  }
+
+  function clampCardWidth(){
+    return Math.min(300, window.innerWidth * 0.88);
+  }
+
+  function positionForStep(){
+    const step = STEPS[stepIndex];
+    const targetEl = step.target ? document.querySelector(step.target) : null;
+    const pad = 8;
+
+    if(targetEl){
+      const rect = targetEl.getBoundingClientRect();
+      spotlight.classList.add('tut-show');
+      spotlight.style.top = (rect.top - pad) + 'px';
+      spotlight.style.left = (rect.left - pad) + 'px';
+      spotlight.style.width = (rect.width + pad*2) + 'px';
+      spotlight.style.height = (rect.height + pad*2) + 'px';
+
+      const cardWidth = clampCardWidth();
+      card.style.width = cardWidth + 'px';
+      const cardHeight = card.offsetHeight || 200;
+
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const placeBelow = spaceBelow >= (cardHeight + 26) || spaceBelow >= spaceAbove;
+
+      let top;
+      if(placeBelow){
+        top = rect.bottom + pad + 16;
+        arrow.classList.remove('arrow-bottom'); arrow.classList.add('arrow-top');
+      } else {
+        top = rect.top - pad - 16 - cardHeight;
+        arrow.classList.remove('arrow-top'); arrow.classList.add('arrow-bottom');
+      }
+      top = Math.max(10, Math.min(top, window.innerHeight - cardHeight - 10));
+
+      let left = rect.left + rect.width/2 - cardWidth/2;
+      left = Math.max(10, Math.min(left, window.innerWidth - cardWidth - 10));
+
+      card.style.top = top + 'px';
+      card.style.left = left + 'px';
+
+      let arrowLeft = rect.left + rect.width/2 - 8;
+      arrowLeft = Math.max(left + 14, Math.min(arrowLeft, left + cardWidth - 30));
+      arrow.style.left = arrowLeft + 'px';
+      arrow.style.top = (placeBelow ? (rect.bottom + pad + 8) : (rect.top - pad - 22)) + 'px';
+      arrow.classList.add('tut-show');
+    } else {
+      spotlight.classList.remove('tut-show');
+      spotlight.style.width = '0px';
+      spotlight.style.height = '0px';
+      spotlight.style.top = '50%';
+      spotlight.style.left = '50%';
+      arrow.classList.remove('tut-show');
+
+      const cardWidth = clampCardWidth();
+      card.style.width = cardWidth + 'px';
+      const cardHeight = card.offsetHeight || 200;
+      card.style.left = ((window.innerWidth - cardWidth) / 2) + 'px';
+      card.style.top = Math.max(10, (window.innerHeight - cardHeight) / 2) + 'px';
+    }
+  }
+
+  function renderStep(){
+    const step = STEPS[stepIndex];
+    titleEl.textContent = step.title;
+    textEl.textContent = step.text;
+    progressEl.textContent = 'STEP ' + (stepIndex+1) + ' OF ' + STEPS.length;
+    backBtn.disabled = stepIndex === 0;
+    nextBtn.textContent = stepIndex === STEPS.length - 1 ? "LET'S GO!" : 'NEXT';
+    buildDots();
+
+    if(step.target){
+      const targetEl = document.querySelector(step.target);
+      if(targetEl) targetEl.scrollIntoView({behavior:'smooth', block:'center'});
+    }
+    card.classList.remove('tut-show');
+    setTimeout(()=>{
+      positionForStep();
+      card.classList.add('tut-show');
+    }, 260);
+  }
+
+  function goToStep(newIndex){
+    const prevStep = STEPS[stepIndex];
+    if(prevStep && prevStep.onExit) prevStep.onExit();
+    stepIndex = newIndex;
+    const nextStep = STEPS[stepIndex];
+    if(nextStep && nextStep.onEnter) nextStep.onEnter();
+    renderStep();
+  }
+
+  function startTutorial(){
+    try{ document.querySelector('.tab[data-tab="spark"]').click(); }catch(e){}
+    document.getElementById('settingsModal').classList.remove('show');
+    document.getElementById('faqModal').classList.remove('show');
+    stepIndex = 0;
+    active = true;
+    overlay.classList.add('tut-active');
+    document.body.style.overflow = 'hidden';
+    const first = STEPS[0];
+    if(first.onEnter) first.onEnter();
+    renderStep();
+
+    if(!resizeHandlerBound){
+      resizeHandlerBound = true;
+      window.addEventListener('resize', ()=>{ if(active) positionForStep(); });
+      window.addEventListener('scroll', ()=>{ if(active) positionForStep(); }, {passive:true});
+    }
+  }
+
+  function endTutorial(markSeen, forceOpenSettings){
+    const step = STEPS[stepIndex];
+    if(step && step.onExit) step.onExit();
+    active = false;
+    overlay.classList.remove('tut-active');
+    spotlight.classList.remove('tut-show');
+    arrow.classList.remove('tut-show');
+    card.classList.remove('tut-show');
+    document.body.style.overflow = '';
+    if(markSeen){
+      try{ localStorage.setItem('toc_tutorial_seen', '1'); }catch(e){}
+    }
+    if(forceOpenSettings){
+      document.getElementById('settingsBtn').click();
+    } else if(markSeen && window.__tocOpenSettingsIfNeeded){
+      window.__tocOpenSettingsIfNeeded();
+    }
+  }
+
+  nextBtn.addEventListener('click', ()=>{
+    if(stepIndex === STEPS.length - 1){
+      endTutorial(true, true);
+    } else {
+      goToStep(stepIndex + 1);
+    }
+  });
+  backBtn.addEventListener('click', ()=>{
+    if(stepIndex > 0) goToStep(stepIndex - 1);
+  });
+  skipBtn.addEventListener('click', ()=> endTutorial(true));
+
+  document.getElementById('replayTutorialBtn').addEventListener('click', startTutorial);
+  document.getElementById('faqReplayTutorialBtn').addEventListener('click', ()=>{
+    faqModal.classList.remove('show');
+    startTutorial();
+  });
+
+  let tutorialSeen = false;
+  try{ tutorialSeen = !!localStorage.getItem('toc_tutorial_seen'); }catch(e){}
+  let forceTutorial = false;
+  try{ forceTutorial = /(?:^|[?&])tutorial=1(?:&|$)/.test(window.location.search); }catch(e){}
+  if(!tutorialSeen || forceTutorial){
+    setTimeout(startTutorial, 300);
+  } else if(window.__tocOpenSettingsIfNeeded){
+    window.__tocOpenSettingsIfNeeded();
+  }
 })();
 </script>
 </body>

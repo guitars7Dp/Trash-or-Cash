@@ -1636,10 +1636,20 @@
       // engine before a failure, even partial/interim? That tells apart a
       // fully dead mic connection from one that heard something but never
       // finalized. Revert to false once the mic issue is confirmed fixed.
+      // TEMP DIAGNOSTIC — interimResults stays on (see note above); it's
+      // also now load-bearing for the adaptive timing below, not just
+      // diagnostics, so it should stay on going forward regardless.
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
+      // Rattling off several fields in one go naturally has small pauses
+      // between numbers ("45 minutes... 12 miles... 25 dollars"). Without
+      // this, the engine can treat the first pause as "done" and stop
+      // listening before the rest is spoken. With it on, it keeps
+      // listening through those pauses; our own silence timer below (not
+      // the browser's) decides when the user is actually finished.
+      recognition.continuous = true;
       activeRecognition = recognition;
-      let heardAnything = false; // TEMP DIAGNOSTIC
+      let heardAnything = false;
       // On iOS — especially a home-screen standalone web app, which spins up
       // its audio engine slower than a normal Safari tab — there's a real
       // gap between calling start() and the mic actually capturing audio.
@@ -1650,13 +1660,37 @@
       // confirms it has begun (onaudiostart if available, falling back to
       // onstart), which is the actual cue to start talking.
 
-      // Force it closed after 8s no matter what, so a stuck session can
-      // never sit on the mic indefinitely and duck background audio while
-      // driving. Flat one-shot timer — not re-armed on interim results.
-      const hardStopTimer = setTimeout(()=>{
-        try{ recognition.abort(); }catch(e){}
-        resetMicButton();
+      // Three timers, each with a distinct job, so timing adapts to
+      // however fast or slow someone talks instead of guessing one fixed
+      // duration for everyone:
+      //
+      // 1) deadMicTimer — if NOTHING has been heard at all (not even a
+      //    partial word) within 8s of starting, that's the dead/stale mic
+      //    connection scenario from before backgrounding fixes — abort
+      //    with an error, since something is genuinely wrong.
+      // 2) silenceTimer — reset every time any speech comes in (interim
+      //    or final). Only fires after a real pause with no new speech,
+      //    meaning the person is actually done talking. Ends cleanly
+      //    (stop, not abort) — this is the normal, expected end of a
+      //    successful entry, not a failure.
+      // 3) hardCeiling — an absolute cap that can't be reset by anything,
+      //    so a session can never sit open indefinitely and duck
+      //    background audio while driving, no matter what else happens.
+      let silenceTimer = null;
+      const deadMicTimer = setTimeout(()=>{
+        if(!heardAnything){
+          try{ recognition.abort(); }catch(e){}
+        }
       }, 8000);
+      const hardCeiling = setTimeout(()=>{
+        try{ recognition.stop(); }catch(e){}
+      }, 20000);
+      function armSilenceTimer(){
+        clearTimeout(silenceTimer);
+        silenceTimer = setTimeout(()=>{
+          try{ recognition.stop(); }catch(e){}
+        }, 3500);
+      }
 
       recognition.onaudiostart = ()=>{
         micBtn.querySelector('.mic-label').textContent = 'LISTENING…';
@@ -1671,7 +1705,8 @@
         }
       };
       recognition.onresult = (e)=>{
-        heardAnything = true; // TEMP DIAGNOSTIC — fires on interim results too
+        heardAnything = true;
+        armSilenceTimer();
         const result = e.results[e.results.length - 1];
         if(result.isFinal){
           applyVoiceEntry(result[0].transcript);
@@ -1685,7 +1720,9 @@
         lastError = e.error;
       };
       recognition.onend = ()=>{
-        clearTimeout(hardStopTimer);
+        clearTimeout(deadMicTimer);
+        clearTimeout(hardCeiling);
+        clearTimeout(silenceTimer);
         resetMicButtonState();
         if(lastError){
           // TEMP DIAGNOSTIC — shows the real error plus whether any audio

@@ -115,6 +115,12 @@
   }
   .mic-btn svg{ width:18px; height:18px; flex-shrink:0; }
   .mic-btn.listening{ background:var(--caution); color:var(--bg); border-color:var(--caution); }
+  .mic-btn.mic-reset-flash{ animation: mic-reset-flash-anim .35s ease; }
+  @keyframes mic-reset-flash-anim{
+    0%{ background:var(--panel); }
+    50%{ background:var(--caution); }
+    100%{ background:var(--panel); }
+  }
   .action-row{ display:flex; gap:10px; margin-bottom:14px; }
   .calc-btn{
     flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
@@ -1452,6 +1458,15 @@
     }
   }
 
+  // Tracks whether a voice entry has ever succeeded this page load. Used to
+  // recognize a specific failure pattern later on (see mic onend below):
+  // a totally silent mic failure right after a prior real success, which
+  // on iOS with CarPlay connected means the audio route got stuck after
+  // the mic interrupted CarPlay playback. Resets to false on every fresh
+  // page load, which is what keeps the auto-recovery below from ever
+  // looping.
+  let hadSuccessfulVoiceEntry = false;
+
   function applyVoiceEntry(rawText){
     const t = wordsToDigits(rawText);
     const active = document.querySelector('.tab.active').dataset.tab;
@@ -1574,6 +1589,7 @@
     }
 
     saveFields();
+    hadSuccessfulVoiceEntry = true;
     calculateNow();
   }
 
@@ -1729,6 +1745,32 @@
         clearTimeout(hardCeiling);
         clearTimeout(silenceTimer);
         resetMicButtonState();
+
+        // On iOS with CarPlay connected, once the mic has interrupted
+        // CarPlay audio at least once, later mic attempts in that same
+        // page session can go permanently, totally silent — nothing
+        // reaches the recognition engine at all, even though it worked
+        // moments earlier. Confirmed by testing that only a full app
+        // relaunch reliably clears it; no JS-level fix (handshakes,
+        // timing) has closed the gap, and there's no web API that can
+        // reach into iOS's CarPlay audio routing directly to fix it
+        // properly. This recognizes that exact signature — a fully silent
+        // failure, after a real prior success this session — and quietly
+        // reloads the page in place instead, which every test has shown
+        // recovers it just as reliably as a full relaunch. All field data
+        // is already saved to localStorage the instant it's captured (see
+        // saveFields() calls), so nothing entered is lost. The
+        // hadSuccessfulVoiceEntry check is what keeps this from ever
+        // looping: it only starts true after a genuine success, and
+        // resets to false on the very reload this triggers, so a second
+        // failure in a row just shows the normal error below instead of
+        // reloading again.
+        if(lastError && !heardAnything && hadSuccessfulVoiceEntry){
+          micBtn.classList.add('mic-reset-flash');
+          setTimeout(()=>{ location.reload(); }, 350);
+          return;
+        }
+
         if(lastError){
           // TEMP DIAGNOSTIC — shows the real error plus whether any audio
           // (even partial/interim) was ever detected before it, so we can

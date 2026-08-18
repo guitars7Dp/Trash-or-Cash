@@ -1683,8 +1683,17 @@
           micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
         }
       };
-      try{ recognition.start(); }
-      catch(e){ resetMicButton(); }
+      // Small settle delay after the handshake, before actually starting
+      // recognition. On iOS the mic hardware can need a brief beat to
+      // catch up even after the handshake resolves, and the "Listening"
+      // label can flip on before real audio is actually flowing. Kept as
+      // short as possible (150ms) so it's not noticeable, while still
+      // giving the engine a moment to be ready before we trust it.
+      setTimeout(()=>{
+        if(!listening) return; // user backed out during this brief wait
+        try{ recognition.start(); }
+        catch(e){ resetMicButton(); }
+      }, 150);
     });
 
     // Extra safety net: if the tab/app gets backgrounded (e.g. switching

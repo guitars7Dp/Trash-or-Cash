@@ -1687,9 +1687,14 @@
       }, 20000);
       function armSilenceTimer(){
         clearTimeout(silenceTimer);
+        // 1.8s of quiet after the last bit of speech means "done talking."
+        // Short enough that it doesn't linger noticeably after you finish,
+        // long enough to survive a normal pause between fields ("45
+        // minutes... 12 miles..."). Started at 3.5s, shortened after real
+        // testing showed that felt like it lingered too long once done.
         silenceTimer = setTimeout(()=>{
           try{ recognition.stop(); }catch(e){}
-        }, 3500);
+        }, 1800);
       }
 
       recognition.onaudiostart = ()=>{

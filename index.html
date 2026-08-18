@@ -1585,6 +1585,7 @@
     let listening = false;
     let activeRecognition = null;
     let lastError = null;
+    let isFirstMicUse = true; // first tap per page load needs a touch more settle time
 
     function resetMicButtonState(){
       listening = false;
@@ -1688,12 +1689,19 @@
       // catch up even after the handshake resolves, and the "Listening"
       // label can flip on before real audio is actually flowing. Kept as
       // short as possible (150ms) so it's not noticeable, while still
-      // giving the engine a moment to be ready before we trust it.
+      // giving the engine a moment to be ready before we trust it. The
+      // very first tap per page load gets a slightly longer settle (300ms)
+      // since everything (handshake, engine, audio session) is spinning up
+      // cold for the first time and has been observed to clip the very
+      // start of speech otherwise; every tap after that uses the shorter,
+      // near-imperceptible delay.
+      const settleDelay = isFirstMicUse ? 300 : 150;
+      isFirstMicUse = false;
       setTimeout(()=>{
         if(!listening) return; // user backed out during this brief wait
         try{ recognition.start(); }
         catch(e){ resetMicButton(); }
-      }, 150);
+      }, settleDelay);
     });
 
     // Extra safety net: if the tab/app gets backgrounded (e.g. switching

@@ -1741,6 +1741,21 @@
         } else {
           micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
         }
+        // EXPERIMENTAL: once a mic session actually interrupts another
+        // app's audio (visibly pausing it), the underlying iOS audio
+        // session appears to get left in a state that a normal background
+        // + return, plus the pre-tap handshake, doesn't fully recover from
+        // — only a full app relaunch reliably has. This tries handing the
+        // audio route back cleanly the moment we're done with it, rather
+        // than leaving it claimed until the next tap. Fired after the UI
+        // has already reset, so it never blocks or delays anything the
+        // user sees; failures are silently ignored since this is a
+        // best-effort cleanup, not something to surface as an error.
+        try{
+          navigator.mediaDevices.getUserMedia({ audio:true })
+            .then(stream => stream.getTracks().forEach(t=> t.stop()))
+            .catch(()=>{});
+        }catch(e){}
       };
       // Small settle delay after the handshake, before actually starting
       // recognition. On iOS the mic hardware can need a brief beat to

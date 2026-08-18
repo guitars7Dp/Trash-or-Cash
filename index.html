@@ -1628,9 +1628,18 @@
 
       const recognition = new SpeechRec(); // fresh instance every tap, on purpose
       recognition.lang = 'en-US';
-      recognition.interimResults = false;
+      // TEMP DIAGNOSTIC: interimResults is normally kept false (see prior
+      // notes on why re-arming a timer off interim results caused
+      // problems). Turning it on here isn't re-introducing that bug — the
+      // hard-stop timer below still fires flat, once, un-re-armed. This is
+      // only to catch a boolean signal: did ANY audio ever reach the
+      // engine before a failure, even partial/interim? That tells apart a
+      // fully dead mic connection from one that heard something but never
+      // finalized. Revert to false once the mic issue is confirmed fixed.
+      recognition.interimResults = true;
       recognition.maxAlternatives = 1;
       activeRecognition = recognition;
+      let heardAnything = false; // TEMP DIAGNOSTIC
       // On iOS — especially a home-screen standalone web app, which spins up
       // its audio engine slower than a normal Safari tab — there's a real
       // gap between calling start() and the mic actually capturing audio.
@@ -1662,8 +1671,11 @@
         }
       };
       recognition.onresult = (e)=>{
-        const transcript = e.results[0][0].transcript;
-        applyVoiceEntry(transcript);
+        heardAnything = true; // TEMP DIAGNOSTIC — fires on interim results too
+        const result = e.results[e.results.length - 1];
+        if(result.isFinal){
+          applyVoiceEntry(result[0].transcript);
+        }
       };
       recognition.onerror = (e)=>{
         // TEMP DIAGNOSTIC — surfaces the real browser-reported error instead
@@ -1676,10 +1688,14 @@
         clearTimeout(hardStopTimer);
         resetMicButtonState();
         if(lastError){
-          micBtn.querySelector('.mic-label').textContent = 'ERR: ' + lastError;
+          // TEMP DIAGNOSTIC — shows the real error plus whether any audio
+          // (even partial/interim) was ever detected before it, so we can
+          // tell a fully dead mic connection apart from one that heard
+          // something but never finalized it. Remove once confirmed fixed.
+          micBtn.querySelector('.mic-label').textContent = 'ERR:' + lastError + (heardAnything ? ' HEARD' : ' SILENT');
           setTimeout(()=>{
             if(!listening) micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
-          }, 4000);
+          }, 5000);
         } else {
           micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
         }

@@ -1923,14 +1923,14 @@
       text: "Start here. Choose which app you're driving for — Spark, Instacart, Shipt, or Food Delivery (DoorDash, Uber Eats, Grubhub, etc.) — the fields below change to match."
     },
     {
-      target: '#micBtn',
-      title: 'Tap to speak',
-      text: "In a hurry? Check the offer in your gig app, then come back here and tap this to read it out loud. Switch back and forth as needed — I'll hold onto what you've already told me."
-    },
-    {
       target: '#panel-spark .required-block',
       title: 'The must-haves',
       text: "These are the only fields you really need — how long the offer says it'll take, how many miles, and what it pays."
+    },
+    {
+      target: '#micBtn',
+      title: 'Tap to speak',
+      text: "In a hurry? Check the offer in your gig app, then come back here and tap this to read it out loud. Switch back and forth as needed — I'll hold onto what you've already told me."
     },
     {
       target: '.more-toggle[data-more="spark"]',
@@ -2064,15 +2064,36 @@
     nextBtn.textContent = stepIndex === STEPS.length - 1 ? "LET'S GO!" : 'NEXT';
     buildDots();
 
-    if(step.target){
-      const targetEl = document.querySelector(step.target);
-      if(targetEl) targetEl.scrollIntoView({behavior:'smooth', block:'center'});
-    }
     card.classList.remove('tut-show');
-    setTimeout(()=>{
-      positionForStep();
-      card.classList.add('tut-show');
-    }, 260);
+    const targetEl = step.target ? document.querySelector(step.target) : null;
+
+    if(targetEl){
+      // The spotlight's dark backdrop spreads out 9999px in every
+      // direction, so collapsing it to zero size still fully covers the
+      // screen — it reads as the "hole" smoothly pinching shut into a
+      // total blackout. Only once it's fully closed do we jump the page
+      // to the new target (invisibly, since the screen is covered) and
+      // let the hole reopen there. This replaces literally scrolling the
+      // visible page underneath, which looked busy and back-and-forth
+      // whenever consecutive steps weren't in strict top-to-bottom order
+      // on the page.
+      spotlight.classList.add('tut-show');
+      spotlight.style.width = '0px';
+      spotlight.style.height = '0px';
+      setTimeout(()=>{
+        targetEl.scrollIntoView({behavior:'auto', block:'center'});
+        positionForStep();
+        card.classList.add('tut-show');
+      }, 280);
+    } else {
+      // No-target steps (intro/outro) never dimmed the background in the
+      // first place, so just fade the spotlight out and center the card.
+      spotlight.classList.remove('tut-show');
+      setTimeout(()=>{
+        positionForStep();
+        card.classList.add('tut-show');
+      }, 200);
+    }
   }
 
   function goToStep(newIndex){

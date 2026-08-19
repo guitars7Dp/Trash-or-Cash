@@ -79,10 +79,12 @@
     height:clamp(100px, 30vw, 150px); width:auto; flex:0 0 auto;
     display:block;
   }
-  html:not([data-theme="light"]) .wordmark{
-    background:rgba(245,242,233,0.92);
-    border-radius:12px;
-    padding:14px 26px 22px 14px;
+  html:not([data-theme="light"]) .wordmark-img{
+    filter:
+      drop-shadow(0 0 1.5px rgba(255,255,255,0.55))
+      drop-shadow(0 0 4px rgba(255,255,255,0.4))
+      drop-shadow(0 0 10px rgba(255,255,255,0.22))
+      drop-shadow(0 0 20px rgba(255,255,255,0.12));
   }
 
   .gear-btn{
@@ -169,6 +171,9 @@
   .waiting-note{
     text-align:center; padding:18px 10px 16px;
     border:1px dashed var(--line-bright); border-radius:14px; margin:6px 0 20px;
+  }
+  html:not([data-theme="light"]) .waiting-note{
+    background:#2A2724;
   }
   .waiting-note.hidden{ display:none; }
   .waiting-note img.waiting-img{ width:160px; height:auto; margin-bottom:8px; }

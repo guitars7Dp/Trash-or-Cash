@@ -1079,7 +1079,7 @@
     if(!isCash){
       const needed = settings.threshold * r.hrs + r.fuel;
       breakeven.textContent = "You'd need "+fmtMoney(needed)+" to clear your target on this one.";
-      const gap = needed - r.offer;
+      const gap = settings.threshold - r.net;
       watchBadge.classList.toggle('show', gap > 0 && gap <= WATCH_THRESHOLD);
     } else {
       const cushion = r.offer - (settings.threshold * r.hrs + r.fuel);
@@ -1684,7 +1684,7 @@
     },
     {
       q: 'What does the radar badge mean?',
-      a: "When an offer is TRASH but within $3 of what you'd need to clear your target, Rocco flags it with a badge showing the exact number to watch for. Handy on Spark, where offers often bump up in small increments — you'll know the moment one hits your number without re-running the math."
+      a: "When an offer is TRASH but within $3/hr of your target, Rocco flags it with a badge. Handy on Spark, where offers often bump up in small increments — you'll know the moment one hits your number without re-running the math."
     },
     {
       q: 'How do I use the mic / voice entry?',

@@ -150,6 +150,7 @@
   const STEPS = [
     {
       target: null,
+      rocco: { pose: 'pawup', anchor: 'right', dx: 6, dy: 40 },
       title: "Hey, I'm Rocco!",
       text: "I dig into a gig offer and tell you if it's actually worth taking. Feed me the details and I'll instantly compare it against the $/hr you want to make — after gas — so you know right away if it's CASH or TRASH. Let me show you around in a few quick steps."
     },

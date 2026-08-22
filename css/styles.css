@@ -345,7 +345,13 @@
   .faq-a{ display:none; padding:0 14px 14px; font-size:13px; color:var(--muted); line-height:1.5; }
   .faq-item.open .faq-a{ display:block; }
 
-  /* ---------- Onboarding tutorial ---------- */
+  /* ---------- Onboarding tutorial ----------
+     The card lost its pill background/border — text floats directly over
+     the dimmed spotlight scrim, with text-shadow standing in for
+     contrast. #tutRocco is a separate free-positioned image (one of six
+     poses, picked per step) that anchors to the accent rule or the
+     text's own edges — see ROCCO_POSES / positionRocco() in tutorial.js.
+     #tutArrow is gone along with the card edge it used to point at. */
   #tutSpotlight{
     position:fixed; z-index:300; pointer-events:none; border-radius:14px;
     box-shadow:0 0 0 9999px rgba(0,0,0,0.78);
@@ -358,36 +364,39 @@
   #tutOverlay.tut-active{ display:block; }
   #tutCard{
     position:fixed; z-index:302; max-width:300px; width:88vw;
-    background:var(--panel); border:1.5px solid var(--line-bright); border-radius:16px;
-    padding:16px 16px 14px; box-shadow:0 12px 34px rgba(0,0,0,0.45);
+    padding:0;
     transition:top .28s ease, left .28s ease;
     visibility:hidden; opacity:0;
   }
   #tutCard.tut-show{ visibility:visible; opacity:1; transition:top .28s ease, left .28s ease, opacity .2s ease; }
-  #tutArrow{
-    position:fixed; z-index:302; width:16px; height:16px; background:var(--panel);
-    border:1.5px solid var(--line-bright); transform:rotate(45deg);
+  #tutRocco{
+    position:fixed; z-index:303; pointer-events:none;
+    transition:top .28s ease, left .28s ease, opacity .2s ease;
     visibility:hidden; opacity:0;
+    filter:drop-shadow(0 6px 10px rgba(0,0,0,0.5));
   }
-  #tutArrow.tut-show{ visibility:visible; opacity:1; }
-  #tutArrow.arrow-top{ border-right:none; border-bottom:none; }
-  #tutArrow.arrow-bottom{ border-left:none; border-top:none; }
-  .tut-head{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
-  .tut-head svg{ width:36px; height:36px; flex:0 0 auto; }
+  #tutRocco.tut-show{ visibility:visible; opacity:1; }
+  .tut-rule{ width:38px; height:3px; background:var(--caution); border-radius:2px; margin-bottom:10px; }
   .tut-progress{
     font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em;
-    color:var(--muted); text-transform:uppercase;
+    color:var(--muted); text-transform:uppercase; text-shadow:0 2px 6px rgba(0,0,0,0.7);
   }
-  .tut-title{ font-family:'Archivo Black',sans-serif; font-size:16px; margin:0 0 6px; }
-  .tut-text{ font-size:13.5px; color:var(--muted); line-height:1.5; margin:0 0 12px; }
+  .tut-title{
+    font-family:'Archivo Black',sans-serif; font-size:16px; margin:6px 0 6px;
+    text-shadow:0 2px 10px rgba(0,0,0,0.7);
+  }
+  .tut-text{
+    font-size:13.5px; color:#d8d4c8; line-height:1.5; margin:0 0 12px;
+    text-shadow:0 2px 8px rgba(0,0,0,0.7);
+  }
   .tut-dots{ display:flex; gap:5px; margin-bottom:14px; }
-  .tut-dots span{ width:6px; height:6px; border-radius:50%; background:var(--line-bright); }
+  .tut-dots span{ width:6px; height:6px; border-radius:50%; background:var(--line-bright); box-shadow:0 1px 3px rgba(0,0,0,0.6); }
   .tut-dots span.on{ background:var(--caution); }
   .tut-actions{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .tut-skip{
     background:none; border:none; color:var(--muted); font-family:'IBM Plex Sans',sans-serif;
     font-weight:500; font-size:12.5px; letter-spacing:0.01em; cursor:pointer; padding:8px 2px;
-    text-decoration:underline;
+    text-decoration:underline; text-shadow:0 2px 6px rgba(0,0,0,0.7);
   }
   .tut-nav{ display:flex; gap:8px; }
   .tut-back, .tut-next{
@@ -396,7 +405,7 @@
   }
   .tut-back{ background:var(--panel-2); border:1.5px solid var(--line-bright); color:var(--text); }
   .tut-back:disabled{ opacity:0.35; cursor:default; }
-  .tut-next{ background:var(--caution); border:none; color:var(--bg); }
+  .tut-next{ background:var(--caution); border:none; color:var(--bg); box-shadow:0 4px 14px rgba(0,0,0,0.4); }
 
   /* ---------- Cold-launch flash screen ---------- */
   #flashScreen{

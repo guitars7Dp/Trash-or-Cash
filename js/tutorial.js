@@ -7,8 +7,8 @@
   // replayed anytime from Settings or the FAQ modal.
   const overlay = document.getElementById('tutOverlay');
   const spotlight = document.getElementById('tutSpotlight');
-  const arrow = document.getElementById('tutArrow');
   const card = document.getElementById('tutCard');
+  const roccoEl = document.getElementById('tutRocco');
   const dotsEl = document.getElementById('tutDots');
   const progressEl = document.getElementById('tutProgress');
   const titleEl = document.getElementById('tutTitle');

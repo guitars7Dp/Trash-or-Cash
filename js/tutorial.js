@@ -92,6 +92,61 @@
   // copy, and the optional `onEnter`/`onExit` hooks run side effects
   // needed just for that step (expanding a panel, faking a demo result —
   // see the functions above).
+
+  // ---------- Rocco pose art ----------
+  // Six poses in images/, each anchoring to a different edge of the
+  // free-floating text. `w` is the pose's display width in px — heights
+  // follow automatically from each image's own aspect ratio.
+  const ROCCO_POSES = {
+    nap:      { src: 'images/rocco-nap.png',       w: 130, alt: 'Rocco napping' },
+    peekTop:  { src: 'images/rocco-peek-top.png',  w: 100, alt: 'Rocco peeking over the top' },
+    dangle:   { src: 'images/rocco-dangle.png',    w: 95,  alt: 'Rocco sitting with a coin' },
+    peekSide: { src: 'images/rocco-peek-side.png', w: 90,  alt: 'Rocco peeking around the side' },
+    hang:     { src: 'images/rocco-hang.png',      w: 85,  alt: 'Rocco hanging' },
+    pawup:    { src: 'images/rocco-pawup.png',     w: 105, alt: 'Rocco waving' },
+  };
+
+  // Positions #tutRocco against the just-placed #tutCard. `anchor` picks
+  // which corner/edge of the card the image locks to before dx/dy nudge
+  // it — those two numbers are the actual tuning knobs; move Rocco
+  // around per step by editing dx/dy in STEPS below until it looks right,
+  // nothing else needs to change.
+  //   'top-right' → above the card, right-aligned to its top edge
+  //   'top-left'  → above the card, left-aligned to its top edge
+  //   'left'      → beside the card's left edge, vertically centered
+  //   'right'     → beside the card's right edge, vertically centered
+  function positionRocco(step, cardRect){
+    const cfg = step.rocco;
+    if(!cfg){ roccoEl.classList.remove('tut-show'); return; }
+    const pose = ROCCO_POSES[cfg.pose];
+    if(roccoEl.getAttribute('data-pose') !== cfg.pose){
+      roccoEl.src = pose.src;
+      roccoEl.alt = pose.alt;
+      roccoEl.setAttribute('data-pose', cfg.pose);
+    }
+    roccoEl.style.width = pose.w + 'px';
+    roccoEl.style.height = 'auto';
+    const rh = roccoEl.offsetHeight || pose.w;
+
+    let top, left;
+    switch(cfg.anchor){
+      case 'top-left':
+        top = cardRect.top - rh; left = cardRect.left; break;
+      case 'left':
+        top = cardRect.top + cardRect.height/2 - rh/2; left = cardRect.left - pose.w; break;
+      case 'right':
+        top = cardRect.top + cardRect.height/2 - rh/2; left = cardRect.right; break;
+      case 'top-right':
+      default:
+        top = cardRect.top - rh; left = cardRect.right - pose.w; break;
+    }
+    top += (cfg.dy || 0);
+    left += (cfg.dx || 0);
+    roccoEl.style.top = top + 'px';
+    roccoEl.style.left = left + 'px';
+    roccoEl.classList.add('tut-show');
+  }
+
   const STEPS = [
     {
       target: null,

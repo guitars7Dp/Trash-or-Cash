@@ -110,7 +110,13 @@
     nap:      { src: 'images/NappingRoccoBGRemoved.png',                 w: 190, ratio: 0.65, gx: 0.45, gy: 0.78, alt: 'Rocco napping' },
     peekTop:  { src: 'images/PeekOverTopRoccoBGRemoved.png',             w: 150, ratio: 0.88, gx: 0.48, gy: 0.80, alt: 'Rocco peeking over the top' },
     dangle:   { src: 'images/HoldingSingleCoinRoccoBGRemoved.png',       w: 140, ratio: 1.40, gx: 0.42, gy: 0.80, alt: 'Rocco sitting with a coin' },
-    peekSide: { src: 'images/PeekingAroundCross-EyedRoccoBGRemoved.png', w: 135, ratio: 1.59, gx: 0.18, gy: 0.68, alt: 'Rocco peeking around the side' },
+    // gx measured precisely off the actual pixels: the flat vertical line
+    // where his body is cropped (left over from the original prop he was
+    // leaning on) sits at a constant 14.1% of the image width for nearly
+    // his whole silhouette — that's the line that has to land exactly on
+    // a real edge, not his paw (which reaches slightly further out, past
+    // that line, the way a hand curls over the front face of a ledge).
+    peekSide: { src: 'images/PeekingAroundCross-EyedRoccoBGRemoved.png', w: 135, ratio: 1.59, gx: 0.141, gy: 0.68, alt: 'Rocco peeking around the side' },
     hang:     { src: 'images/HangingRoccoBGRemoved.png',                 w: 125, ratio: 1.95, gx: 0.50, gy: 0.06, alt: 'Rocco hanging' },
     pawup:    { src: 'images/DollarBillWavingRoccoBGRemoved.png',        w: 155, ratio: 1.32, gx: 0.40, gy: 0.97, alt: 'Rocco waving' },
   };
@@ -209,7 +215,7 @@
     },
     {
       target: '#calculateBtn',
-      rocco: { pose: 'nap', edge: 'top', along: 0.75, dy: 20 },
+      rocco: { pose: 'nap', edge: 'top', along: 0.75, dy: 55 },
       title: 'Calculate',
       text: "I calculate automatically the moment your required fields are filled — by typing, by voice, or a mix of both across a few mic taps. Tap CALCULATE if you just want to jump straight to the verdict."
     },
@@ -231,7 +237,7 @@
       target: '#watchBadge',
       onEnter: showDemoWatch,
       onExit: hideDemoWatch,
-      rocco: { pose: 'hang', ref: 'target', edge: 'top', along: 0.35 },
+      rocco: { pose: 'hang', ref: 'target', edge: 'top', along: 0.45 },
       title: "Keep this on your radar",
       text: "When an offer is TRASH but within $3 of your target, I'll flag it like this. Handy on Spark, where offers often bump up a bit at a time — watch for the number I'm pointing at, and grab it the moment it lands."
     },
@@ -243,13 +249,13 @@
     },
     {
       target: '#themeBtn',
-      rocco: { pose: 'pawup', edge: 'bottom', along: 0 },
+      rocco: { pose: 'pawup', edge: 'bottom', along: 0, dx: -50 },
       title: 'Light or dark',
       text: 'Tap this anytime to switch between light and dark mode.'
     },
     {
       target: null,
-      rocco: { pose: 'nap', edge: 'top', along: 0.75, dy: 20 },
+      rocco: { pose: 'nap', edge: 'top', along: 0.75, dy: 35 },
       title: "That's the tour!",
       text: "Find me again anytime under Settings — TUTORIAL for the full walkthrough, or HELP & FAQ for quick answers. Let's get your numbers set up."
     }
@@ -343,6 +349,25 @@
     }
   }
 
+  // Re-measures and re-positions everything a couple more times shortly
+  // after the initial placement, without waiting on any single event to
+  // tell us layout has actually settled. Two real things can silently
+  // shift the card/target's true size or position AFTER positionForStep()
+  // first runs: a web font finishing its swap-in (changes text wrapping,
+  // so cardHeight changes) and a CSS reveal transition still animating on
+  // the spotlighted element (e.g. the verdict card growing into view) —
+  // both were causing Rocco to lock onto a stale rect, which is why the
+  // same step could render "perfect" one load and visibly off the next.
+  // Guards against a step change mid-flight by checking stepIndex is
+  // still the one this was scheduled for.
+  function schedulePositionSettle(forStepIndex){
+    [150, 450].forEach(function(extraDelay){
+      setTimeout(function(){
+        if(active && stepIndex === forStepIndex) positionForStep();
+      }, extraDelay);
+    });
+  }
+
   // Updates the card's text/progress/buttons for the current step, then
   // animates into position — closing the spotlight down to a pinpoint,
   // jumping to the new target while the screen is fully covered, and
@@ -377,6 +402,7 @@
         targetEl.scrollIntoView({behavior:'auto', block:'center'});
         positionForStep();
         card.classList.add('tut-show');
+        schedulePositionSettle(stepIndex);
       }, 280);
     } else {
       // No-target steps (intro/outro) now dim the same as every other
@@ -385,6 +411,7 @@
       setTimeout(()=>{
         positionForStep();
         card.classList.add('tut-show');
+        schedulePositionSettle(stepIndex);
       }, 200);
     }
   }
@@ -422,6 +449,15 @@
       resizeHandlerBound = true;
       window.addEventListener('resize', ()=>{ if(active) positionForStep(); });
       window.addEventListener('scroll', ()=>{ if(active) positionForStep(); }, {passive:true});
+      // Belt-and-suspenders for the same font-swap race schedulePositionSettle()
+      // guards against: if the browser is still finishing a web font load
+      // when the tutorial opens, re-position once it's actually done,
+      // whichever step happens to be showing at that moment.
+      try{
+        if(document.fonts && document.fonts.ready){
+          document.fonts.ready.then(()=>{ if(active) positionForStep(); });
+        }
+      }catch(e){}
     }
   }
 

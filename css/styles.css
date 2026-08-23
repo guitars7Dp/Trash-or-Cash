@@ -348,14 +348,15 @@
   /* ---------- Onboarding tutorial ----------
      The card lost its pill background/border in favor of a soft
      translucent panel — text sits on a blurred dark backdrop instead of
-     a hard-edged box. #tutRocco is a separate free-positioned image (one
-     of six poses, picked per step) that anchors to the card and, for
-     some steps, overlaps it slightly on purpose — see ROCCO_POSES /
-     positionRocco() in tutorial.js. #tutArrow is gone along with the
-     card edge it used to point at. */
+     a hard-edged box. #tutRocco now lives INSIDE the card, top-center,
+     every single step — no more anchoring him to real app elements
+     (buttons, badges) whose position/size varies by device and kept
+     causing him to overlap something. The card's padding-top below is
+     deliberately oversized to reserve a strip just for him — see
+     positionRocco() in tutorial.js, which centers him in that strip. */
   #tutSpotlight{
     position:fixed; z-index:300; pointer-events:none; border-radius:14px;
-    box-shadow:0 0 0 9999px rgba(0,0,0,0.65);
+    box-shadow:0 0 0 9999px rgba(0,0,0,0.9);
     border:2px solid var(--caution);
     transition:opacity .12s ease;
     top:50%; left:50%; width:0; height:0; opacity:0;
@@ -365,8 +366,12 @@
   #tutOverlay.tut-active{ display:block; }
   #tutCard{
     position:fixed; z-index:302; max-width:300px; width:88vw;
-    padding:20px 18px 16px;
-    background: rgba(0,0,0,0.55);
+    /* Top padding is oversized on purpose — 10px inset + his tallest
+       pose (96px) + a little breathing room = the reserved strip
+       Rocco sits in, so he can NEVER land on top of the title or body
+       text below regardless of how long either one is. */
+    padding:118px 18px 16px;
+    background: rgba(0,0,0,0.85);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
     border-radius: 14px;

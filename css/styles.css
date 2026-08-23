@@ -346,20 +346,6 @@
   .faq-item.open .faq-a{ display:block; }
 
   /* ---------- Onboarding tutorial ----------
-     The card lost its pill background/border — text floats directly over
-     the dimmed spotlight scrim, with text-shadow standing in for
-     contrast. #tutRocco is a separate free-positioned image (one of six
-     poses, picked per step) that anchors to the accent rule or the
-     text's own edges — see ROCCO_POSES / positionRocco() in tutorial.js.
-     #tutArrow is gone along with the card edge it used to point at. */
-  #tutSpotlight{
-    position:fixed; z-index:300; pointer-events:none; border-radius:14px;
-    box-shadow:0 0 0 9999px rgba(0,0,0,0.78);
-    border:2px solid var(--caution);
-    transition:top .28s ease, left .28s ease, width .28s ease, height .28s ease, opacity .2s ease;
-    top:50%; left:50%; width:0; height:0; opacity:0;
-  }
- /* ---------- Onboarding tutorial ----------
      The card lost its pill background/border in favor of a soft
      translucent panel — text sits on a blurred dark backdrop instead of
      a hard-edged box. #tutRocco is a separate free-positioned image (one
@@ -369,11 +355,8 @@
      card edge it used to point at. */
   #tutSpotlight{
     position:fixed; z-index:300; pointer-events:none; border-radius:14px;
-    box-shadow:0 0 0 9999px rgba(0,0,0,0.90);
+    box-shadow:0 0 0 9999px rgba(0,0,0,0.45);
     border:2px solid var(--caution);
-    /* No top/left/width/height transition: step-to-step moves are meant
-       to land instantly, in the same frame as the card and Rocco, not
-       slide into place. Only the very first open still fades in. */
     transition:opacity .12s ease;
     top:50%; left:50%; width:0; height:0; opacity:0;
   }
@@ -395,15 +378,10 @@
     position:fixed; z-index:303; pointer-events:none;
     transition:opacity .12s ease;
     visibility:hidden; opacity:0;
-    filter:drop-shadow(0 6px 10px rgba(0,0,0,0.5));
-    /* A soft dark halo behind him, independent of whatever app UI
-       happens to be underneath — keeps him from reading as "busy"
-       against a logo, button, or tab bar showing faintly through the
-       dimmed background. border-radius only shapes this shadow into an
-       oval; it doesn't clip his actual artwork since overflow stays at
-       its default (visible). */
-    border-radius: 50%;
-    box-shadow: 0 0 45px 25px rgba(0,0,0,0.65);
+    /* Just a plain drop shadow to lift him off the background — the
+       round glow halo that used to sit behind him is gone, it read as
+       an odd spotlight circle rather than helping him stand out. */
+    filter:drop-shadow(0 6px 14px rgba(0,0,0,0.6));
   }
   #tutRocco.tut-show{ visibility:visible; opacity:1; }
   .tut-rule{ width:38px; height:3px; background:var(--caution); border-radius:2px; margin:0 auto 10px; }
@@ -437,7 +415,6 @@
   .tut-back{ background:var(--panel-2); border:1.5px solid var(--line-bright); color:var(--text); }
   .tut-back:disabled{ opacity:0.35; cursor:default; }
   .tut-next{ background:var(--caution); border:none; color:var(--bg); box-shadow:0 4px 14px rgba(0,0,0,0.4); }
-
   /* ---------- Cold-launch flash screen ---------- */
   #flashScreen{
     position:fixed; inset:0; z-index:9999;

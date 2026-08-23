@@ -160,6 +160,11 @@
 
     // Keep him fully on-screen on narrow phones — only kicks in if the
     // exact contact point would otherwise push him off the viewport edge.
+    // (Tried dropping the vertical half of this once, betting the clamp
+    // itself was the bug on the centered intro/outro steps — it wasn't;
+    // without it he rendered entirely off the top of the screen there,
+    // which is strictly worse. Kept as a safety net; the actual "too far
+    // up" cause is being corrected directly via dy below instead.)
     const margin = 8;
     left = Math.max(margin, Math.min(left, window.innerWidth - pose.w - margin));
     top = Math.max(margin, Math.min(top, window.innerHeight - rh - margin));
@@ -171,7 +176,7 @@
   const STEPS = [
     {
       target: null,
-      rocco: { pose: 'pawup', edge: 'top', along: 0.85 },
+      rocco: { pose: 'pawup', edge: 'top', along: 0.5, dy: 55 },
       title: "Hey, I'm Rocco!",
       text: "I dig into a gig offer and tell you if it's actually worth taking. Feed me the details and I'll instantly compare it against the $/hr you want to make — after gas — so you know right away if it's CASH or TRASH. Let me show you around in a few quick steps."
     },
@@ -183,7 +188,7 @@
     },
     {
       target: '#panel-spark .required-block',
-      rocco: { pose: 'peekSide', edge: 'left', along: 0.35 },
+      rocco: { pose: 'peekSide', ref: 'target', edge: 'left', along: 0.35 },
       title: 'The must-haves',
       text: "These are the only fields you really need — how long the offer says it'll take, how many miles, and what it pays."
     },
@@ -198,19 +203,19 @@
       onEnter: openMorePanel,
       onExit: closeMorePanel,
       cardDx: -40,
-      rocco: { pose: 'peekSide', edge: 'right', flip: true, along: 0.3 },
+      rocco: { pose: 'peekSide', ref: 'target', edge: 'right', flip: true, along: 0.3 },
       title: 'More details (optional)',
       text: "Got a return trip? Tap here to add it in. It's never required, but it sharpens the math."
     },
     {
       target: '#calculateBtn',
-      rocco: { pose: 'nap', ref: 'target', edge: 'top', along: 0.7 },
+      rocco: { pose: 'nap', edge: 'top', along: 0.75, dy: 20 },
       title: 'Calculate',
       text: "I calculate automatically the moment your required fields are filled — by typing, by voice, or a mix of both across a few mic taps. Tap CALCULATE if you just want to jump straight to the verdict."
     },
     {
       target: '#clearFieldsBtn',
-      rocco: { pose: 'peekTop', edge: 'top', along: 0.75 },
+      rocco: { pose: 'peekTop', edge: 'top', along: 0.75, dy: -15 },
       title: 'Clear fields',
       text: "Done with this offer? Tap here to wipe the current tab's fields for the next one."
     },
@@ -218,7 +223,7 @@
       target: '#verdictCard',
       onEnter: showDemoResult,
       onExit: hideDemoResult,
-      rocco: { pose: 'dangle', edge: 'top', along: 0.8 },
+      rocco: { pose: 'dangle', ref: 'target', edge: 'top', along: 0.85 },
       title: 'CASH or TRASH',
       text: "This is the verdict. CASH means the offer meets or beats your target pay per hour after gas — TRASH means it falls short. The stats below break down net pay, gross pay, fuel cost, and time."
     },
@@ -226,25 +231,25 @@
       target: '#watchBadge',
       onEnter: showDemoWatch,
       onExit: hideDemoWatch,
-      rocco: { pose: 'hang', ref: 'target', edge: 'top', along: 0.8 },
+      rocco: { pose: 'hang', ref: 'target', edge: 'top', along: 0.35 },
       title: "Keep this on your radar",
       text: "When an offer is TRASH but within $3 of your target, I'll flag it like this. Handy on Spark, where offers often bump up a bit at a time — watch for the number I'm pointing at, and grab it the moment it lands."
     },
     {
       target: '#settingsBtn',
-      rocco: { pose: 'peekSide', edge: 'right', flip: true, along: 0.55 },
+      rocco: { pose: 'peekSide', ref: 'target', edge: 'right', flip: true, along: 0.55 },
       title: 'Your numbers',
       text: "Tap the gear to set your target $/hr, your vehicle's MPG, and gas price. I'll remember them for every calculation, and you can always come back here to change them anytime."
     },
     {
       target: '#themeBtn',
-      rocco: { pose: 'pawup', edge: 'bottom', along: 0.15 },
+      rocco: { pose: 'pawup', edge: 'bottom', along: 0 },
       title: 'Light or dark',
       text: 'Tap this anytime to switch between light and dark mode.'
     },
     {
       target: null,
-      rocco: { pose: 'nap', edge: 'top', along: 0.75 },
+      rocco: { pose: 'nap', edge: 'top', along: 0.75, dy: 20 },
       title: "That's the tour!",
       text: "Find me again anytime under Settings — TUTORIAL for the full walkthrough, or HELP & FAQ for quick answers. Let's get your numbers set up."
     }

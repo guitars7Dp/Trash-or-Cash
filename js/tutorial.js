@@ -344,6 +344,17 @@
   // actual CSS, and it's gone the instant the tutorial stops pointing
   // at it — the app itself is untouched outside these few seconds.
   let shrunkTarget = null;
+  // A temporary spacer appended to the very end of the page while the
+  // tutorial is running (see startTutorial()/endTutorial()) purely so
+  // there's always enough room to scroll a late-page target (the verdict
+  // card, the watch badge) up near the top of the screen. Without it,
+  // the browser simply can't scroll any further once the real page
+  // content runs out — a target near the bottom of the page gets stuck
+  // wherever it naturally sits, leaving no room below it for the card,
+  // which was pushing the card's Back/Next buttons off-screen. It's
+  // added on start and removed on end, so it never affects the app
+  // outside an active tutorial run.
+  let scrollSpacer = null;
 
   // Redraws the step-progress dots, highlighting the current step.
   function buildDots(){
@@ -520,7 +531,15 @@
       // going flush to the very edge.
       const rect = targetEl.getBoundingClientRect();
       const delta = rect.top - TARGET_TOP_MARGIN;
-      if(Math.abs(delta) > 2) window.scrollBy(0, delta);
+      // behavior:'instant' explicitly, not the default — if the page (or
+      // the OS's own reduced-motion/accessibility settings) has smooth
+      // scrolling on, an unqualified scroll call animates over several
+      // frames, and the 'scroll' listener below re-runs positionForStep()
+      // on every one of those frames — which is what was making Rocco and
+      // the card visibly glide into place each step instead of snapping
+      // straight there. 'instant' overrides that regardless of any CSS
+      // or OS-level scroll-behavior setting.
+      if(Math.abs(delta) > 2) window.scrollBy({top: delta, left: 0, behavior: 'instant'});
     }
     positionForStep();
     spotlight.classList.add('tut-show');
@@ -562,6 +581,17 @@
     active = true;
     overlay.classList.add('tut-active');
     document.body.style.overflow = 'hidden';
+
+    // See the scrollSpacer declaration above — guarantees every step's
+    // target can be scrolled up near the top of the screen even if it
+    // sits close to the bottom of the real page.
+    if(!scrollSpacer){
+      scrollSpacer = document.createElement('div');
+      scrollSpacer.id = 'tutScrollSpacer';
+      scrollSpacer.style.cssText = 'height:' + (window.innerHeight + 100) + 'px; pointer-events:none;';
+      document.body.appendChild(scrollSpacer);
+    }
+
     const first = STEPS[0];
     if(first.onEnter) first.onEnter();
 
@@ -592,6 +622,10 @@
     const step = STEPS[stepIndex];
     if(step && step.onExit) step.onExit();
     restoreShrunkTarget();
+    if(scrollSpacer){
+      scrollSpacer.remove();
+      scrollSpacer = null;
+    }
     active = false;
     overlay.classList.remove('tut-active');
     spotlight.classList.remove('tut-show');

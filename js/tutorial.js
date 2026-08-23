@@ -184,9 +184,16 @@
       default:       ex = ref.left + (cfg.along ?? 0.5) * ref.width; ey = ref.top; break;
     }
 
-    const gx = cfg.flip ? (1 - pose.gx) : pose.gx;
+    // A step can override which point on the pose makes contact (gx/gy)
+    // instead of using the pose's default grip point — e.g. pawup's
+    // default grip is his feet (for standing ON something), but a step
+    // that has him reaching UP to grab a button above him needs his
+    // raised hand to be the contact point instead.
+    const baseGx = cfg.gx ?? pose.gx;
+    const baseGy = cfg.gy ?? pose.gy;
+    const gx = cfg.flip ? (1 - baseGx) : baseGx;
     let left = ex - gx * pose.w + (cfg.dx || 0);
-    let top = ey - pose.gy * rh + (cfg.dy || 0);
+    let top = ey - baseGy * rh + (cfg.dy || 0);
 
     // Keep him fully on-screen on narrow phones — only kicks in if the
     // exact contact point would otherwise push him off the viewport edge.
@@ -218,7 +225,7 @@
     },
     {
       target: '#panel-spark .required-block',
-      rocco: { pose: 'peekSide', ref: 'target', edge: 'left', along: 0.35 },
+      rocco: { pose: 'peekSide', ref: 'target', edge: 'left', along: 0.35, dx: -24 },
       title: 'The must-haves',
       text: "These are the only fields you really need — how long the offer says it'll take, how many miles, and what it pays."
     },
@@ -233,13 +240,17 @@
       onEnter: openMorePanel,
       onExit: closeMorePanel,
       cardDx: -40,
-      rocco: { pose: 'peekSide', ref: 'target', edge: 'right', flip: true, along: 0.3 },
+      rocco: { pose: 'peekSide', ref: 'target', edge: 'right', flip: true, along: 0.3, dx: 24 },
       title: 'More details (optional)',
       text: "Got a return trip? Tap here to add it in. It's never required, but it sharpens the math."
     },
     {
       target: '#calculateBtn',
-      rocco: { pose: 'nap', edge: 'top', along: 0.75 },
+      // Your mark was explicit: his contact line goes on the CALCULATE
+      // button's own bottom edge, not the card's top edge — switching
+      // the reference entirely rather than continuing to nudge dy on
+      // the wrong anchor.
+      rocco: { pose: 'nap', ref: 'target', edge: 'bottom', along: 0.5 },
       title: 'Calculate',
       text: "I calculate automatically the moment your required fields are filled — by typing, by voice, or a mix of both across a few mic taps. Tap CALCULATE if you just want to jump straight to the verdict."
     },
@@ -253,7 +264,7 @@
       target: '#verdictCard',
       onEnter: showDemoResult,
       onExit: hideDemoResult,
-      rocco: { pose: 'dangle', ref: 'target', edge: 'top', along: 0.85 },
+      rocco: { pose: 'dangle', ref: 'target', edge: 'top', along: 0.35, dy: 18 },
       title: 'CASH or TRASH',
       text: "This is the verdict. CASH means the offer meets or beats your target pay per hour after gas — TRASH means it falls short. The stats below break down net pay, gross pay, fuel cost, and time."
     },
@@ -261,25 +272,33 @@
       target: '#watchBadge',
       onEnter: showDemoWatch,
       onExit: hideDemoWatch,
-      rocco: { pose: 'hang', ref: 'target', edge: 'top', along: 0.45 },
+      rocco: { pose: 'hang', ref: 'target', edge: 'top', along: 0.58 },
       title: "Keep this on your radar",
       text: "When an offer is TRASH but within $3 of your target, I'll flag it like this. Handy on Spark, where offers often bump up a bit at a time — watch for the number I'm pointing at, and grab it the moment it lands."
     },
     {
       target: '#settingsBtn',
-      rocco: { pose: 'peekSide', ref: 'target', edge: 'right', flip: true, along: 0.55 },
+      // Same dx correction applied to 3 and 5 (measured: their target's
+      // real DOM edge sits noticeably inside its visible border) —
+      // extended here on the same pattern, though this one's unconfirmed.
+      rocco: { pose: 'peekSide', ref: 'target', edge: 'right', flip: true, along: 0.55, dx: 24 },
       title: 'Your numbers',
       text: "Tap the gear to set your target $/hr, your vehicle's MPG, and gas price. I'll remember them for every calculation, and you can always come back here to change them anytime."
     },
     {
       target: '#themeBtn',
-      rocco: { pose: 'pawup', edge: 'bottom', along: 0, dx: -50 },
+      // His raised hand — not his feet — is the contact point here, since
+      // he's reaching UP to grab the button rather than standing on
+      // something below him. gx/gy override the pose's default (feet)
+      // grip point with his hand's actual position in the art, measured
+      // the same way as the other poses.
+      rocco: { pose: 'pawup', ref: 'target', edge: 'bottom', along: 0.4, gx: 0.65, gy: 0.03 },
       title: 'Light or dark',
       text: 'Tap this anytime to switch between light and dark mode.'
     },
     {
       target: null,
-      rocco: { pose: 'nap', edge: 'top', along: 0.75 },
+      rocco: { pose: 'nap', edge: 'top', along: 0.75, dy: -60 },
       title: "That's the tour!",
       text: "Find me again anytime under Settings — TUTORIAL for the full walkthrough, or HELP & FAQ for quick answers. Let's get your numbers set up."
     }

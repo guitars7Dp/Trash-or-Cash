@@ -348,12 +348,13 @@
   /* ---------- Onboarding tutorial ----------
      The card lost its pill background/border in favor of a soft
      translucent panel — text sits on a blurred dark backdrop instead of
-     a hard-edged box. #tutRocco now lives INSIDE the card, top-center,
-     every single step — no more anchoring him to real app elements
-     (buttons, badges) whose position/size varies by device and kept
-     causing him to overlap something. The card's padding-top below is
-     deliberately oversized to reserve a strip just for him — see
-     positionRocco() in tutorial.js, which centers him in that strip. */
+     a hard-edged box. #tutRocco lives INSIDE the card, in a reserved
+     header strip (padding-top below), every single step — no more
+     anchoring him to real app elements whose position/size varies by
+     device. #tutBar and #tutShelf are two small fixtures INSIDE that
+     strip (created in tutorial.js, styled here) that give him something
+     real to grip, stand on, or peek around — see positionRocco() in
+     tutorial.js for which pose uses which. */
   #tutSpotlight{
     position:fixed; z-index:300; pointer-events:none; border-radius:14px;
     box-shadow:0 0 0 9999px rgba(0,0,0,0.9);
@@ -366,11 +367,14 @@
   #tutOverlay.tut-active{ display:block; }
   #tutCard{
     position:fixed; z-index:302; max-width:300px; width:88vw;
-    /* Top padding is oversized on purpose — 10px inset + his tallest
-       pose (96px) + a little breathing room = the reserved strip
-       Rocco sits in, so he can NEVER land on top of the title or body
-       text below regardless of how long either one is. */
-    padding:118px 18px 16px;
+    /* Top padding reserves the header strip #tutBar and #tutShelf live
+       in, sized to the actual tallest pose (peekSide) plus a small
+       buffer — not padded further than that. The previous version
+       (180px) made the card tall enough that the existing above/below
+       placement logic could no longer fit it without overlapping the
+       very app element the slide points at; this is the smallest
+       padding that still keeps every pose off the title/body text. */
+    padding:145px 18px 16px;
     background: rgba(0,0,0,0.85);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
@@ -379,6 +383,22 @@
     visibility:hidden; opacity:0;
   }
   #tutCard.tut-show{ visibility:visible; opacity:1; transition:opacity .12s ease; }
+  /* The two fixtures Rocco stands on / hangs from / peeks around —
+     plain little painted ledges, styled to read as physical objects
+     (a soft highlight on top, a shadow underneath) rather than just
+     decorative lines. */
+  #tutBar, #tutShelf{
+    position:absolute; left:50%; transform:translateX(-50%);
+    border-radius:3px;
+    background:linear-gradient(180deg, #d4a24a, var(--caution) 55%, #8a611f);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.35);
+  }
+  #tutBar{ top:18px; width:64px; height:5px; }
+  #tutShelf{ top:110px; width:150px; height:5px; }
+  /* Only the fixture in use for the current pose is shown (toggled in
+     positionRocco()) — the idle one fades out instead of sitting there
+     unused. */
+  #tutBar, #tutShelf{ transition:opacity .12s ease; }
   #tutRocco{
     position:fixed; z-index:303; pointer-events:none;
     transition:opacity .12s ease;

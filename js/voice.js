@@ -330,7 +330,9 @@
       // found to break recognition entirely when CarPlay owns the audio
       // session — so it's skipped in that case rather than risking a hang or
       // leaving the mic in a broken state.
-            if(!listening) return; // user backed out (re-tapped) while awaiting above
+                  await primeAudioRoute();
+      if(!listening) return; // user backed out (re-tapped) while awaiting above
+
 
 
 

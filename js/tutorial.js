@@ -23,6 +23,16 @@
   const roccoShelf = document.createElement('div');
   roccoShelf.id = 'tutShelf';
   card.appendChild(roccoShelf);
+  // #tutWall is a short vertical post, centered in the strip, for the
+  // "peeking around the side" pose specifically — a horizontal ledge's
+  // END doesn't read as something to peek AROUND, and gripping the far
+  // edge of a wide shelf also pushed him well off-center. A thin
+  // centered post fixes both: it visually reads as a wall/pillar, and
+  // because it's centered and narrow, gripping either edge of it keeps
+  // him close to the card's center instead of way off to one side.
+  const roccoWall = document.createElement('div');
+  roccoWall.id = 'tutWall';
+  card.appendChild(roccoWall);
   const dotsEl = document.getElementById('tutDots');
   const progressEl = document.getElementById('tutProgress');
   const titleEl = document.getElementById('tutTitle');
@@ -156,7 +166,7 @@
   const ROCCO_POSES = {
     nap:        { src: 'images/NappingRoccoBGRemoved.png',                 w: 88,  gx: 0.50,  gy: 0.86,  anchor: 'shelf-top',   alt: 'Rocco napping' },
     peekTop:    { src: 'images/PeekOverTopRoccoBGRemoved.png',             w: 100, gx: 0.49,  gy: 0.823, anchor: 'shelf-top',   alt: 'Rocco peeking over the top' },
-    peekSide:   { src: 'images/PeekingAroundCross-EyedRoccoBGRemoved.png', w: 72,  gx: 0.113, gy: 0.70,  anchor: 'shelf-side',  alt: 'Rocco peeking around the side' },
+    peekSide:   { src: 'images/PeekingAroundCross-EyedRoccoBGRemoved.png', w: 72,  gx: 0.113, gy: 0.70,  anchor: 'wall-side',   alt: 'Rocco peeking around the side' },
     hang:       { src: 'images/HangingRoccoBGRemoved.png',                 w: 100, gx: 0.49,  gy: 0.055, anchor: 'bar-bottom',  alt: 'Rocco hanging' },
     pawup:      { src: 'images/DollarBillWavingRoccoBGRemoved.png',        w: 96,  gx: 0.234, gy: 0.90,  anchor: 'shelf-top',   alt: 'Rocco waving' },
     seatedCoin: { src: 'images/HoldingSingleCoinRoccoBGRemoved.png',       w: 92,  cx: 0.424, gy: 0.70,  anchor: 'shelf-top',   alt: 'Rocco sitting with a coin' },
@@ -166,14 +176,15 @@
   // Both fixtures are real elements inside the card, so their rects are
   // just measured directly — no target geometry, no viewport-dependent
   // math, nothing that changes across devices.
-  //   flip: true — for peekSide only, grips the shelf's LEFT end instead
-  //         of its default right end (also mirrors the art to match).
+  //   flip: true — for peekSide only, grips the wall's LEFT edge instead
+  //         of its default right edge (also mirrors the art to match).
   function positionRocco(step){
     const cfg = step.rocco;
     if(!cfg){
       roccoEl.classList.remove('tut-show');
       roccoBar.style.opacity = '0';
       roccoShelf.style.opacity = '0';
+      roccoWall.style.opacity = '0';
       return;
     }
     const pose = ROCCO_POSES[cfg.pose];
@@ -187,35 +198,35 @@
 
     const shelf = roccoShelf.getBoundingClientRect();
     const bar = roccoBar.getBoundingClientRect();
+    const wall = roccoWall.getBoundingClientRect();
 
-    // Only the fixture actually being used is shown — otherwise an idle
-    // ledge/bar with nothing on it just reads as visual clutter, and (for
-    // the hang pose) his dangling feet could visually graze an unused shelf.
+    // Only the fixture actually being used is shown — otherwise idle
+    // fixtures with nothing on them just read as visual clutter.
     roccoBar.style.opacity = (pose.anchor === 'bar-bottom') ? '1' : '0';
-    roccoShelf.style.opacity = (pose.anchor === 'bar-bottom') ? '0' : '1';
+    roccoShelf.style.opacity = (pose.anchor === 'shelf-top') ? '1' : '0';
+    roccoWall.style.opacity = (pose.anchor === 'wall-side') ? '1' : '0';
 
     let ex, ey, left;
     if(pose.anchor === 'bar-bottom'){
       ex = bar.left + bar.width/2;
       ey = bar.bottom;
-      // Centered on the bar by his actual displayed width, not by gx —
-      // gx marks where his paws grip, which isn't always the horizontal
-      // center of the artwork, and centering on gx made him look
-      // noticeably off-center even though the grip point was "correct."
+      // Centered on the bar by his actual displayed width (adjusted by
+      // cx below), not by gx — gx marks where his paws grip, which
+      // isn't always the horizontal center of the artwork, and centering
+      // on gx made him look noticeably off-center even though the grip
+      // point was "correct."
       left = ex - (pose.cx ?? 0.5) * pose.w;
       roccoEl.style.transform = 'none';
-    } else if(pose.anchor === 'shelf-side'){
-      // Peeking around something only reads as "peeking" if he sits a
-      // little off to one side — but anchoring him to the shelf's actual
-      // edge (75px+ from card center) pushed him almost off the card
-      // entirely. Use a small fixed offset from the shelf's own center
-      // instead, so he's clearly leaning to one side without looking
-      // like he fell out of the frame.
+    } else if(pose.anchor === 'wall-side'){
+      // A short vertical post, centered in the card, that he grips the
+      // left or right edge of — reads as actually peeking AROUND
+      // something (unlike the old horizontal-shelf-end anchor), and
+      // because the post is thin and centered, either edge sits close
+      // to the card's center, so he stays close to center too instead
+      // of leaning way off to one side.
       const rightEnd = !cfg.flip;
-      const off = 22;
-      const shelfCenterX = shelf.left + shelf.width/2;
-      ex = rightEnd ? (shelfCenterX + off) : (shelfCenterX - off);
-      ey = shelf.top + shelf.height/2;
+      ex = rightEnd ? wall.right : wall.left;
+      ey = wall.top + wall.height/2;
       const gx = rightEnd ? pose.gx : (1 - pose.gx);
       left = ex - gx * pose.w;
       roccoEl.style.transform = rightEnd ? 'none' : 'scaleX(-1)';
@@ -239,7 +250,9 @@
       text: "I dig into a gig offer and tell you if it's actually worth taking. Feed me the details and I'll instantly compare it against the $/hr you want to make — after gas — so you know right away if it's CASH or TRASH. Let me show you around in a few quick steps."
     },
     {
-      target: '#tabs',
+      // '.tabs' (class), not '#tabs' — the tab bar's id was dropped from
+      // the HTML at some point; the class name is still there and stable.
+      target: '.tabs',
       rocco: { pose: 'peekTop' },
       title: 'Pick your platform',
       text: "Start here. Choose which app you're driving for — Spark, Instacart, Shipt, or Food Delivery (DoorDash, Uber Eats, Grubhub, etc.) — the fields below change to match."
@@ -372,7 +385,22 @@
       } else {
         top = rect.top - pad - 16 - cardHeight;
       }
+      // Keep the card fully on-screen when there's room to...
       top = Math.max(10, Math.min(top, window.innerHeight - cardHeight - 10));
+      // ...but never let that on-screen adjustment pull it back over the
+      // target. For a tall target (the verdict panel with its stats
+      // breakdown, a multi-field required-block, etc.) there sometimes
+      // isn't enough room on either side for the full card, and the
+      // clamp above was winning that fight — shoving the card back over
+      // the exact element the step is explaining. The whole point of
+      // this card is to point at that element, so never covering it
+      // wins even in the rare case where the card's far edge ends up
+      // running slightly past the viewport edge instead.
+      if(placeBelow){
+        top = Math.max(top, rect.bottom + pad);
+      } else {
+        top = Math.min(top, rect.top - pad - cardHeight);
+      }
 
       let left = rect.left + rect.width/2 - cardWidth/2;
       left = Math.max(10, Math.min(left, window.innerWidth - cardWidth - 10));
@@ -424,7 +452,14 @@
 
     const targetEl = step.target ? document.querySelector(step.target) : null;
     if(targetEl){
-      targetEl.scrollIntoView({behavior:'auto', block:'center'});
+      // 'start' (not 'center') — a tall target like the required-fields
+      // block leaves almost no clearance on EITHER side when centered,
+      // which is what was letting the card land on top of it even with
+      // the never-cover-the-target fix in positionForStep(): there was
+      // nowhere valid left to put it. Aligning the target's top near the
+      // top of the screen instead guarantees maximum room below it,
+      // which is the side the card already prefers.
+      targetEl.scrollIntoView({behavior:'auto', block:'start'});
     }
     positionForStep();
     spotlight.classList.add('tut-show');

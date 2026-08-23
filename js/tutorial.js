@@ -94,37 +94,43 @@
   // see the functions above).
 
   // ---------- Rocco pose art ----------
-  // Six poses in images/, each anchoring to a different edge of the
-  // free-floating text. `w` is the pose's display width in px — heights
-  // follow automatically from each image's own aspect ratio.
-  // `ratio` is each pose's own height ÷ width, measured ahead of time —
-  // used to compute his on-screen height immediately, instead of reading
-  // it back from the <img> element, which can still report 0 or a
-  // leftover value from the previous pose the instant a new image src is
-  // set and hasn't finished loading yet.
+  // Six poses in images/. `w` is display width in px (height follows from
+  // `ratio`, height÷width, measured ahead of time so his size is correct
+  // immediately instead of waiting on the image to load).
+  //
+  // `gx`/`gy` are the important part: the exact spot INSIDE his own image
+  // — as a fraction of its width/height, from the top-left corner — where
+  // his hands/paws/feet actually make contact. Measured by eye off the
+  // real art: e.g. hang's raised paws sit right at the top-center of that
+  // image (gx 0.50, gy 0.06), pawup's feet are almost at the bottom
+  // (gy 0.97). Positioning locks THAT point exactly onto the target edge,
+  // so it always reads as him actually gripping/standing/lying on
+  // something real — never floating near it with a gap.
   const ROCCO_POSES = {
-    nap:      { src: 'images/NappingRoccoBGRemoved.png',                 w: 190, ratio: 0.65, alt: 'Rocco napping' },
-    peekTop:  { src: 'images/PeekOverTopRoccoBGRemoved.png',             w: 150, ratio: 0.88, alt: 'Rocco peeking over the top' },
-    dangle:   { src: 'images/HoldingSingleCoinRoccoBGRemoved.png',       w: 140, ratio: 1.40, alt: 'Rocco sitting with a coin' },
-    peekSide: { src: 'images/PeekingAroundCross-EyedRoccoBGRemoved.png', w: 135, ratio: 1.59, alt: 'Rocco peeking around the side' },
-    hang:     { src: 'images/HangingRoccoBGRemoved.png',                 w: 125, ratio: 1.95, alt: 'Rocco hanging' },
-    pawup:    { src: 'images/DollarBillWavingRoccoBGRemoved.png',        w: 155, ratio: 1.32, alt: 'Rocco waving' },
+    nap:      { src: 'images/NappingRoccoBGRemoved.png',                 w: 190, ratio: 0.65, gx: 0.45, gy: 0.78, alt: 'Rocco napping' },
+    peekTop:  { src: 'images/PeekOverTopRoccoBGRemoved.png',             w: 150, ratio: 0.88, gx: 0.48, gy: 0.80, alt: 'Rocco peeking over the top' },
+    dangle:   { src: 'images/HoldingSingleCoinRoccoBGRemoved.png',       w: 140, ratio: 1.40, gx: 0.42, gy: 0.80, alt: 'Rocco sitting with a coin' },
+    peekSide: { src: 'images/PeekingAroundCross-EyedRoccoBGRemoved.png', w: 135, ratio: 1.59, gx: 0.18, gy: 0.68, alt: 'Rocco peeking around the side' },
+    hang:     { src: 'images/HangingRoccoBGRemoved.png',                 w: 125, ratio: 1.95, gx: 0.50, gy: 0.06, alt: 'Rocco hanging' },
+    pawup:    { src: 'images/DollarBillWavingRoccoBGRemoved.png',        w: 155, ratio: 1.32, gx: 0.40, gy: 0.97, alt: 'Rocco waving' },
   };
 
-  // Positions #tutRocco against the just-placed #tutCard. `anchor` picks
-  // which corner/edge of the card the image locks to before dx/dy nudge
-  // it — those two numbers are the actual tuning knobs; move Rocco
-  // around per step by editing dx/dy in STEPS below until it looks right,
-  // nothing else needs to change. GAP keeps him from touching the text
-  // at all before dx/dy are even applied — steps were overlapping the
-  // card because the old version placed him flush against its edge with
-  // no breathing room.
-  //   'top-right' → above the card, right-aligned to its top edge
-  //   'top-left'  → above the card, left-aligned to its top edge
-  //   'left'      → beside the card's left edge, vertically centered
-  //   'right'     → beside the card's right edge, vertically centered
-  const GAP = 16;
-  function positionRocco(step, cardRect){
+  // Positions #tutRocco so its grip point lands exactly on a real edge.
+  // Each step's `rocco` config says which edge and where along it:
+  //   edge: 'top' | 'bottom' | 'left' | 'right'  — which side of the
+  //         reference rect his grip point attaches to
+  //   ref:  'card' (default) — the tutorial text box's own edge, or
+  //         'target' — the actual spotlighted app element's edge (the
+  //         button/badge itself), for poses that should grab or hang
+  //         from THAT instead of the text box
+  //   along: 0–1 — where along that edge (left-to-right for top/bottom,
+  //         top-to-bottom for left/right)
+  //   flip: true — mirrors the art horizontally (peekSide is drawn
+  //         gripping with its left paw; flip it to grip with its right
+  //         when he's peeking around a box's right-hand edge instead)
+  //   dx/dy: small optional nudge in px, once the real contact point is
+  //         already correct — not the primary tool anymore
+  function positionRocco(step, cardRect, targetRect){
     const cfg = step.rocco;
     if(!cfg){ roccoEl.classList.remove('tut-show'); return; }
     const pose = ROCCO_POSES[cfg.pose];
@@ -135,26 +141,25 @@
     }
     roccoEl.style.width = pose.w + 'px';
     roccoEl.style.height = 'auto';
+    roccoEl.style.transform = cfg.flip ? 'scaleX(-1)' : 'none';
     const rh = pose.w * pose.ratio;
 
-    let top, left;
-    switch(cfg.anchor){
-      case 'top-left':
-        top = cardRect.top - rh - GAP; left = cardRect.left; break;
-      case 'left':
-        top = cardRect.top + cardRect.height/2 - rh/2; left = cardRect.left - pose.w - GAP; break;
-      case 'right':
-        top = cardRect.top + cardRect.height/2 - rh/2; left = cardRect.right + GAP; break;
-      case 'top-right':
-      default:
-        top = cardRect.top - rh - GAP; left = cardRect.right - pose.w; break;
+    const ref = (cfg.ref === 'target' && targetRect) ? targetRect : cardRect;
+    let ex, ey;
+    switch(cfg.edge){
+      case 'bottom': ex = ref.left + (cfg.along ?? 0.5) * ref.width; ey = ref.bottom; break;
+      case 'left':   ex = ref.left; ey = ref.top + (cfg.along ?? 0.5) * ref.height; break;
+      case 'right':  ex = ref.right; ey = ref.top + (cfg.along ?? 0.5) * ref.height; break;
+      case 'top':
+      default:       ex = ref.left + (cfg.along ?? 0.5) * ref.width; ey = ref.top; break;
     }
-    top += (cfg.dy || 0);
-    left += (cfg.dx || 0);
-    // Keep Rocco fully on-screen on narrow viewports — the anchor math
-    // above assumes there's room beside/above the card, which isn't
-    // always true on a phone, so clamp back inside the visible area
-    // with a small margin.
+
+    const gx = cfg.flip ? (1 - pose.gx) : pose.gx;
+    let left = ex - gx * pose.w + (cfg.dx || 0);
+    let top = ey - pose.gy * rh + (cfg.dy || 0);
+
+    // Keep him fully on-screen on narrow phones — only kicks in if the
+    // exact contact point would otherwise push him off the viewport edge.
     const margin = 8;
     left = Math.max(margin, Math.min(left, window.innerWidth - pose.w - margin));
     top = Math.max(margin, Math.min(top, window.innerHeight - rh - margin));
@@ -166,25 +171,25 @@
   const STEPS = [
     {
       target: null,
-      rocco: { pose: 'pawup', anchor: 'top-right', dx: 0, dy: 20 },
+      rocco: { pose: 'pawup', edge: 'top', along: 0.85 },
       title: "Hey, I'm Rocco!",
       text: "I dig into a gig offer and tell you if it's actually worth taking. Feed me the details and I'll instantly compare it against the $/hr you want to make — after gas — so you know right away if it's CASH or TRASH. Let me show you around in a few quick steps."
     },
     {
       target: '#tabs',
-      rocco: { pose: 'peekTop', anchor: 'top-right', dx: 4, dy: 40 },
+      rocco: { pose: 'peekTop', edge: 'top', along: 0.65 },
       title: 'Pick your platform',
       text: "Start here. Choose which app you're driving for — Spark, Instacart, Shipt, or Food Delivery (DoorDash, Uber Eats, Grubhub, etc.) — the fields below change to match."
     },
     {
       target: '#panel-spark .required-block',
-      rocco: { pose: 'peekSide', anchor: 'left', dx: -20, dy: 0 },
+      rocco: { pose: 'peekSide', edge: 'left', along: 0.35 },
       title: 'The must-haves',
       text: "These are the only fields you really need — how long the offer says it'll take, how many miles, and what it pays."
     },
     {
       target: '#micBtn',
-      rocco: { pose: 'hang', anchor: 'top-right', dx: 4, dy: 20 },
+      rocco: { pose: 'hang', ref: 'target', edge: 'bottom', along: 0.75 },
       title: 'Tap to speak',
       text: "In a hurry? Check the offer in your gig app, then come back here and tap this to read it out loud. Switch back and forth as needed — I'll hold onto what you've already told me."
     },
@@ -193,19 +198,19 @@
       onEnter: openMorePanel,
       onExit: closeMorePanel,
       cardDx: -40,
-      rocco: { pose: 'peekSide', anchor: 'right', dx: -30, dy: 0 },
+      rocco: { pose: 'peekSide', edge: 'right', flip: true, along: 0.3 },
       title: 'More details (optional)',
       text: "Got a return trip? Tap here to add it in. It's never required, but it sharpens the math."
     },
     {
       target: '#calculateBtn',
-      rocco: { pose: 'nap', anchor: 'top-right', dx: 8, dy: 34 },
+      rocco: { pose: 'nap', ref: 'target', edge: 'top', along: 0.7 },
       title: 'Calculate',
       text: "I calculate automatically the moment your required fields are filled — by typing, by voice, or a mix of both across a few mic taps. Tap CALCULATE if you just want to jump straight to the verdict."
     },
     {
       target: '#clearFieldsBtn',
-      rocco: { pose: 'peekTop', anchor: 'top-right', dx: 4, dy: 40 },
+      rocco: { pose: 'peekTop', edge: 'top', along: 0.75 },
       title: 'Clear fields',
       text: "Done with this offer? Tap here to wipe the current tab's fields for the next one."
     },
@@ -213,7 +218,7 @@
       target: '#verdictCard',
       onEnter: showDemoResult,
       onExit: hideDemoResult,
-      rocco: { pose: 'dangle', anchor: 'top-right', dx: 6, dy: 55 },
+      rocco: { pose: 'dangle', edge: 'top', along: 0.8 },
       title: 'CASH or TRASH',
       text: "This is the verdict. CASH means the offer meets or beats your target pay per hour after gas — TRASH means it falls short. The stats below break down net pay, gross pay, fuel cost, and time."
     },
@@ -221,25 +226,25 @@
       target: '#watchBadge',
       onEnter: showDemoWatch,
       onExit: hideDemoWatch,
-      rocco: { pose: 'hang', anchor: 'top-right', dx: 4, dy: -25 },
+      rocco: { pose: 'hang', ref: 'target', edge: 'top', along: 0.8 },
       title: "Keep this on your radar",
       text: "When an offer is TRASH but within $3 of your target, I'll flag it like this. Handy on Spark, where offers often bump up a bit at a time — watch for the number I'm pointing at, and grab it the moment it lands."
     },
     {
       target: '#settingsBtn',
-      rocco: { pose: 'peekSide', anchor: 'right', dx: -30, dy: 50 },
+      rocco: { pose: 'peekSide', edge: 'right', flip: true, along: 0.55 },
       title: 'Your numbers',
       text: "Tap the gear to set your target $/hr, your vehicle's MPG, and gas price. I'll remember them for every calculation, and you can always come back here to change them anytime."
     },
     {
       target: '#themeBtn',
-      rocco: { pose: 'pawup', anchor: 'left', dx: -25, dy: 80 },
+      rocco: { pose: 'pawup', edge: 'bottom', along: 0.15 },
       title: 'Light or dark',
       text: 'Tap this anytime to switch between light and dark mode.'
     },
     {
       target: null,
-      rocco: { pose: 'nap', anchor: 'top-right', dx: 8, dy: 34 },
+      rocco: { pose: 'nap', edge: 'top', along: 0.75 },
       title: "That's the tour!",
       text: "Find me again anytime under Settings — TUTORIAL for the full walkthrough, or HELP & FAQ for quick answers. Let's get your numbers set up."
     }
@@ -310,7 +315,7 @@
       left = Math.max(10, Math.min(left, window.innerWidth - cardWidth - 10));
       card.style.top = top + 'px';
       card.style.left = left + 'px';
-      positionRocco(step, card.getBoundingClientRect());
+      positionRocco(step, card.getBoundingClientRect(), rect);
     } else {
       // Still dim the background even with nothing spotlighted (previously
       // this branch skipped the scrim entirely, which worked fine for a

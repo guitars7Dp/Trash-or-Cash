@@ -107,9 +107,15 @@
   // so it always reads as him actually gripping/standing/lying on
   // something real — never floating near it with a gap.
   const ROCCO_POSES = {
-    nap:      { src: 'images/NappingRoccoBGRemoved.png',                 w: 190, ratio: 0.65, gx: 0.45, gy: 0.78, alt: 'Rocco napping' },
+    // gy re-measured directly off the pixels (was 0.78 — a real error, not
+    // just a tuning nudge): his belly/contact line actually sits at 90%
+    // down the image, not 78%. That's why he kept rendering well inside
+    // whatever he was supposed to be lying ON TOP of.
+    nap:      { src: 'images/NappingRoccoBGRemoved.png',                 w: 190, ratio: 0.65, gx: 0.45, gy: 0.90, alt: 'Rocco napping' },
     peekTop:  { src: 'images/PeekOverTopRoccoBGRemoved.png',             w: 150, ratio: 0.88, gx: 0.48, gy: 0.80, alt: 'Rocco peeking over the top' },
-    dangle:   { src: 'images/HoldingSingleCoinRoccoBGRemoved.png',       w: 140, ratio: 1.40, gx: 0.42, gy: 0.80, alt: 'Rocco sitting with a coin' },
+    // Measured seat line (ignoring his tail, which naturally dangles
+    // lower and isn't the contact point): ~0.77, close to what was here.
+    dangle:   { src: 'images/HoldingSingleCoinRoccoBGRemoved.png',       w: 140, ratio: 1.40, gx: 0.42, gy: 0.77, alt: 'Rocco sitting with a coin' },
     // gx measured precisely off the actual pixels: the flat vertical line
     // where his body is cropped (left over from the original prop he was
     // leaning on) sits at a constant 14.1% of the image width for nearly
@@ -215,7 +221,7 @@
     },
     {
       target: '#calculateBtn',
-      rocco: { pose: 'nap', edge: 'top', along: 0.75, dy: 55 },
+      rocco: { pose: 'nap', edge: 'top', along: 0.75 },
       title: 'Calculate',
       text: "I calculate automatically the moment your required fields are filled — by typing, by voice, or a mix of both across a few mic taps. Tap CALCULATE if you just want to jump straight to the verdict."
     },
@@ -255,7 +261,7 @@
     },
     {
       target: null,
-      rocco: { pose: 'nap', edge: 'top', along: 0.75, dy: 35 },
+      rocco: { pose: 'nap', edge: 'top', along: 0.75 },
       title: "That's the tour!",
       text: "Find me again anytime under Settings — TUTORIAL for the full walkthrough, or HELP & FAQ for quick answers. Let's get your numbers set up."
     }
@@ -326,7 +332,19 @@
       left = Math.max(10, Math.min(left, window.innerWidth - cardWidth - 10));
       card.style.top = top + 'px';
       card.style.left = left + 'px';
-      positionRocco(step, card.getBoundingClientRect(), rect);
+      // For "ref: target" poses, hand positionRocco the SPOTLIGHT's edge
+      // (rect padded out by the same `pad` used above), not the target
+      // element's own raw edge. The spotlight's glowing outline is the
+      // only line actually visible on screen around a highlighted
+      // element — the element's real DOM edge sits `pad`px inside it,
+      // invisible. Gripping/lying against the padded rect is what
+      // actually lands on the line the user can see.
+      const paddedTargetRect = {
+        left: rect.left - pad, top: rect.top - pad,
+        right: rect.right + pad, bottom: rect.bottom + pad,
+        width: rect.width + pad*2, height: rect.height + pad*2
+      };
+      positionRocco(step, card.getBoundingClientRect(), paddedTargetRect);
     } else {
       // Still dim the background even with nothing spotlighted (previously
       // this branch skipped the scrim entirely, which worked fine for a
@@ -361,7 +379,7 @@
   // Guards against a step change mid-flight by checking stepIndex is
   // still the one this was scheduled for.
   function schedulePositionSettle(forStepIndex){
-    [150, 450].forEach(function(extraDelay){
+    [150, 450, 900].forEach(function(extraDelay){
       setTimeout(function(){
         if(active && stepIndex === forStepIndex) positionForStep();
       }, extraDelay);

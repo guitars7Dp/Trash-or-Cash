@@ -1,4 +1,4 @@
-  // ---------- Tutorial engine ----------
+// ---------- Tutorial engine ----------
   // A guided, spotlight-driven walkthrough: STEPS below defines the script
   // (what to point at and what to say at each stop), positionForStep()
   // does the on-screen geometry, and goToStep/renderStep/startTutorial/
@@ -156,16 +156,19 @@
     },
     {
       target: '#tabs',
+      rocco: { pose: 'peekTop', anchor: 'top-right', dx: 4, dy: 6 },
       title: 'Pick your platform',
       text: "Start here. Choose which app you're driving for — Spark, Instacart, Shipt, or Food Delivery (DoorDash, Uber Eats, Grubhub, etc.) — the fields below change to match."
     },
     {
       target: '#panel-spark .required-block',
+      rocco: { pose: 'peekSide', anchor: 'left', dx: -6, dy: 0 },
       title: 'The must-haves',
       text: "These are the only fields you really need — how long the offer says it'll take, how many miles, and what it pays."
     },
     {
       target: '#micBtn',
+      rocco: { pose: 'hang', anchor: 'top-right', dx: 4, dy: 4 },
       title: 'Tap to speak',
       text: "In a hurry? Check the offer in your gig app, then come back here and tap this to read it out loud. Switch back and forth as needed — I'll hold onto what you've already told me."
     },
@@ -173,16 +176,19 @@
       target: '.more-toggle[data-more="spark"]',
       onEnter: openMorePanel,
       onExit: closeMorePanel,
+      rocco: { pose: 'peekSide', anchor: 'right', dx: 6, dy: 0 },
       title: 'More details (optional)',
       text: "Got a return trip? Tap here to add it in. It's never required, but it sharpens the math."
     },
     {
       target: '#calculateBtn',
+      rocco: { pose: 'nap', anchor: 'top-right', dx: 8, dy: 6 },
       title: 'Calculate',
       text: "I calculate automatically the moment your required fields are filled — by typing, by voice, or a mix of both across a few mic taps. Tap CALCULATE if you just want to jump straight to the verdict."
     },
     {
       target: '#clearFieldsBtn',
+      rocco: { pose: 'peekTop', anchor: 'top-right', dx: 4, dy: 6 },
       title: 'Clear fields',
       text: "Done with this offer? Tap here to wipe the current tab's fields for the next one."
     },
@@ -190,6 +196,7 @@
       target: '#verdictCard',
       onEnter: showDemoResult,
       onExit: hideDemoResult,
+      rocco: { pose: 'dangle', anchor: 'top-right', dx: 6, dy: 4 },
       title: 'CASH or TRASH',
       text: "This is the verdict. CASH means the offer meets or beats your target pay per hour after gas — TRASH means it falls short. The stats below break down net pay, gross pay, fuel cost, and time."
     },
@@ -197,21 +204,25 @@
       target: '#watchBadge',
       onEnter: showDemoWatch,
       onExit: hideDemoWatch,
+      rocco: { pose: 'hang', anchor: 'top-right', dx: 4, dy: 4 },
       title: "Keep this on your radar",
       text: "When an offer is TRASH but within $3 of your target, I'll flag it like this. Handy on Spark, where offers often bump up a bit at a time — watch for the number I'm pointing at, and grab it the moment it lands."
     },
     {
       target: '#settingsBtn',
+      rocco: { pose: 'peekSide', anchor: 'right', dx: 6, dy: 0 },
       title: 'Your numbers',
       text: "Tap the gear to set your target $/hr, your vehicle's MPG, and gas price. I'll remember them for every calculation, and you can always come back here to change them anytime."
     },
     {
       target: '#themeBtn',
+      rocco: { pose: 'pawup', anchor: 'left', dx: -6, dy: 0 },
       title: 'Light or dark',
       text: 'Tap this anytime to switch between light and dark mode.'
     },
     {
       target: null,
+      rocco: { pose: 'nap', anchor: 'top-right', dx: 8, dy: 6 },
       title: "That's the tour!",
       text: "Find me again anytime under Settings — TUTORIAL for the full walkthrough, or HELP & FAQ for quick answers. Let's get your numbers set up."
     }
@@ -237,13 +248,14 @@
     return Math.min(300, window.innerWidth * 0.88);
   }
 
-  // Positions the spotlight cutout, the tutorial card, and the pointer
-  // arrow for the current step, relative to its target element's current
-  // on-screen position. Flips the card above vs. below the target
+  // Positions the spotlight cutout and the tutorial card for the current
+  // step, relative to its target element's current on-screen position,
+  // and hands off to positionRocco() to place that step's pose art
+  // against the card. Flips the card above vs. below the target
   // depending on which side has more room, and clamps everything to stay
   // fully on-screen. Steps with no target (target: null) instead just
-  // center the card with no spotlight. Called on every step change and
-  // again on resize/scroll while the tutorial is active, since the
+  // center the card with no spotlight cutout. Called on every step change
+  // and again on resize/scroll while the tutorial is active, since the
   // target's position can shift.
   function positionForStep(){
     const step = STEPS[stepIndex];
@@ -269,10 +281,8 @@
       let top;
       if(placeBelow){
         top = rect.bottom + pad + 16;
-        arrow.classList.remove('arrow-bottom'); arrow.classList.add('arrow-top');
       } else {
         top = rect.top - pad - 16 - cardHeight;
-        arrow.classList.remove('arrow-top'); arrow.classList.add('arrow-bottom');
       }
       top = Math.max(10, Math.min(top, window.innerHeight - cardHeight - 10));
 
@@ -281,25 +291,26 @@
 
       card.style.top = top + 'px';
       card.style.left = left + 'px';
-
-      let arrowLeft = rect.left + rect.width/2 - 8;
-      arrowLeft = Math.max(left + 14, Math.min(arrowLeft, left + cardWidth - 30));
-      arrow.style.left = arrowLeft + 'px';
-      arrow.style.top = (placeBelow ? (rect.bottom + pad + 8) : (rect.top - pad - 22)) + 'px';
-      arrow.classList.add('tut-show');
+      positionRocco(step, card.getBoundingClientRect());
     } else {
-      spotlight.classList.remove('tut-show');
+      // Still dim the background even with nothing spotlighted (previously
+      // this branch skipped the scrim entirely, which worked fine for a
+      // solid card but left free-floating text sitting directly over the
+      // full-brightness app underneath — no longer legible without a
+      // panel behind it). Width/height stay 0 so there's no cutout hole,
+      // just a full, even dim.
+      spotlight.classList.add('tut-show');
       spotlight.style.width = '0px';
       spotlight.style.height = '0px';
       spotlight.style.top = '50%';
       spotlight.style.left = '50%';
-      arrow.classList.remove('tut-show');
 
       const cardWidth = clampCardWidth();
       card.style.width = cardWidth + 'px';
       const cardHeight = card.offsetHeight || 200;
       card.style.left = ((window.innerWidth - cardWidth) / 2) + 'px';
       card.style.top = Math.max(10, (window.innerHeight - cardHeight) / 2) + 'px';
+      positionRocco(step, card.getBoundingClientRect());
     }
   }
 
@@ -339,9 +350,9 @@
         card.classList.add('tut-show');
       }, 280);
     } else {
-      // No-target steps (intro/outro) never dimmed the background in the
-      // first place, so just fade the spotlight out and center the card.
-      spotlight.classList.remove('tut-show');
+      // No-target steps (intro/outro) now dim the same as every other
+      // step — see the note in positionForStep() — so this just centers
+      // the card instead of also killing the scrim.
       setTimeout(()=>{
         positionForStep();
         card.classList.add('tut-show');
@@ -399,8 +410,8 @@
     active = false;
     overlay.classList.remove('tut-active');
     spotlight.classList.remove('tut-show');
-    arrow.classList.remove('tut-show');
     card.classList.remove('tut-show');
+    roccoEl.classList.remove('tut-show');
     document.body.style.overflow = '';
     if(markSeen){
       try{ localStorage.setItem('toc_tutorial_seen', '1'); }catch(e){}

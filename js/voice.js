@@ -276,6 +276,35 @@
       resetMicButtonState();
       micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
     }
+    let audioCtx = null;
+    // Forces an active CarPlay audio route before starting speech
+    // recognition. CarPlay's audio session isn't "live" until some app is
+    // actively playing sound through it — if nothing is playing, Safari's
+    // mic session can come up completely silent with no error at all. This
+    // plays an ~80ms near-silent tone (not literally 0 volume, since iOS
+    // can optimize a fully-silent buffer away and skip opening the route)
+    // to force the same live-route behavior music playback already
+    // triggers, before the real recognition session is created.
+    async function primeAudioRoute(){
+      try{
+        if(!audioCtx){
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if(audioCtx.state === 'suspended'){
+          await audioCtx.resume();
+        }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0.001;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.08);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }catch(e){
+        // If this fails, proceed anyway — no worse off than before this existed.
+      }
+    }
 
     micBtn.addEventListener('click', async ()=>{
       if(listening) return;

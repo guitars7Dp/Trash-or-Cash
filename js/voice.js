@@ -301,25 +301,8 @@
       // found to break recognition entirely when CarPlay owns the audio
       // session — so it's skipped in that case rather than risking a hang or
       // leaving the mic in a broken state.
-      let isCarPlay = false;
-      try{
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        isCarPlay = devices.some(d => d.kind === 'audiooutput' && /carplay/i.test(d.label || ''));
-      }catch(e){}
+            if(!listening) return; // user backed out (re-tapped) while awaiting above
 
-      if(!isCarPlay){
-        try{
-          const probeTimeout = new Promise((_, reject) => setTimeout(()=>reject(new Error('probe-timeout')), 1200));
-          const stream = await Promise.race([
-            navigator.mediaDevices.getUserMedia({ audio:true }),
-            probeTimeout
-          ]);
-          stream.getTracks().forEach(t=> t.stop());
-        }catch(e){
-          console.log('Mic probe skipped:', e.message);
-        }
-      }
-      if(!listening) return; // user backed out (re-tapped) while awaiting above
 
 
       const recognition = new SpeechRec(); // fresh instance every tap, on purpose

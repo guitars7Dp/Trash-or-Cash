@@ -48,13 +48,31 @@
   // a real result happens to already be showing (or becomes visible)
   // during the tutorial, exiting the step doesn't rip a genuine result
   // off the screen.
+  // Forces an element straight to its final on-screen state, skipping
+  // whatever CSS transition normally animates it in — used only for the
+  // tutorial's fake reveals below. Without this, positionForStep() would
+  // measure the element mid-animation (e.g. still growing into view) and
+  // lock Rocco onto a rect that isn't final yet, which is exactly what
+  // was causing both the "floating"/"mid-air" positioning and the
+  // noticeable pause the tutorial used to insert to wait it out. Reading
+  // offsetHeight forces the browser to apply the class change immediately
+  // (a synchronous layout), so by the time this returns the element's
+  // real, final rect is available right away — no animation, no wait.
+  function revealInstantly(el, addClass){
+    const prevTransition = el.style.transition;
+    el.style.transition = 'none';
+    if(addClass) el.classList.add(addClass);
+    void el.offsetHeight;
+    el.style.transition = prevTransition;
+  }
   let demoResultForced = false;
   function showDemoResult(){
     const resultEl = document.getElementById('result');
     if(!resultEl.classList.contains('show')){
       demoResultForced = true;
-      resultEl.classList.add('show');
-      document.getElementById('verdictCard').classList.add('cash');
+      const verdictEl = document.getElementById('verdictCard');
+      revealInstantly(resultEl, 'show');
+      revealInstantly(verdictEl, 'cash');
     }
   }
   function hideDemoResult(){
@@ -71,11 +89,11 @@
     const badge = document.getElementById('watchBadge');
     if(!resultEl.classList.contains('show')){
       demoResultForced = true;
-      resultEl.classList.add('show');
+      revealInstantly(resultEl, 'show');
     }
     if(!badge.classList.contains('show')){
       demoWatchForced = true;
-      badge.classList.add('show');
+      revealInstantly(badge, 'show');
     }
   }
   function hideDemoWatch(){
@@ -367,30 +385,15 @@
     }
   }
 
-  // Re-measures and re-positions everything a couple more times shortly
-  // after the initial placement, without waiting on any single event to
-  // tell us layout has actually settled. Two real things can silently
-  // shift the card/target's true size or position AFTER positionForStep()
-  // first runs: a web font finishing its swap-in (changes text wrapping,
-  // so cardHeight changes) and a CSS reveal transition still animating on
-  // the spotlighted element (e.g. the verdict card growing into view) —
-  // both were causing Rocco to lock onto a stale rect, which is why the
-  // same step could render "perfect" one load and visibly off the next.
-  // Guards against a step change mid-flight by checking stepIndex is
-  // still the one this was scheduled for.
-  function schedulePositionSettle(forStepIndex){
-    [150, 450, 900].forEach(function(extraDelay){
-      setTimeout(function(){
-        if(active && stepIndex === forStepIndex) positionForStep();
-      }, extraDelay);
-    });
-  }
-
-  // Updates the card's text/progress/buttons for the current step, then
-  // animates into position — closing the spotlight down to a pinpoint,
-  // jumping to the new target while the screen is fully covered, and
-  // reopening there (see the inline notes below for why it's done this
-  // way instead of visibly scrolling).
+  // Updates the card's text/progress/buttons for the current step, jumps
+  // straight to the target (an instant scroll, not an animated one), and
+  // shows the spotlight/card/Rocco together in the same pass. No waiting,
+  // no delayed re-check: everything that could previously make a rect
+  // wrong at measurement time (fonts still swapping in, a demo reveal
+  // still animating) is now made correct BEFORE this runs — see
+  // revealInstantly() above and the font-ready gate in startTutorial()
+  // below — so a single synchronous measure-and-show is reliable, and
+  // the character and text box appear together with no visible pause.
   function renderStep(){
     const step = STEPS[stepIndex];
     titleEl.textContent = step.title;
@@ -400,38 +403,13 @@
     nextBtn.textContent = stepIndex === STEPS.length - 1 ? "LET'S GO!" : 'NEXT';
     buildDots();
 
-    card.classList.remove('tut-show');
     const targetEl = step.target ? document.querySelector(step.target) : null;
-
     if(targetEl){
-      // The spotlight's dark backdrop spreads out 9999px in every
-      // direction, so collapsing it to zero size still fully covers the
-      // screen — it reads as the "hole" smoothly pinching shut into a
-      // total blackout. Only once it's fully closed do we jump the page
-      // to the new target (invisibly, since the screen is covered) and
-      // let the hole reopen there. This replaces literally scrolling the
-      // visible page underneath, which looked busy and back-and-forth
-      // whenever consecutive steps weren't in strict top-to-bottom order
-      // on the page.
-      spotlight.classList.add('tut-show');
-      spotlight.style.width = '0px';
-      spotlight.style.height = '0px';
-      setTimeout(()=>{
-        targetEl.scrollIntoView({behavior:'auto', block:'center'});
-        positionForStep();
-        card.classList.add('tut-show');
-        schedulePositionSettle(stepIndex);
-      }, 280);
-    } else {
-      // No-target steps (intro/outro) now dim the same as every other
-      // step — see the note in positionForStep() — so this just centers
-      // the card instead of also killing the scrim.
-      setTimeout(()=>{
-        positionForStep();
-        card.classList.add('tut-show');
-        schedulePositionSettle(stepIndex);
-      }, 200);
+      targetEl.scrollIntoView({behavior:'auto', block:'center'});
     }
+    positionForStep();
+    spotlight.classList.add('tut-show');
+    card.classList.add('tut-show');
   }
 
   // Moves to a new step: runs the outgoing step's onExit (if any), runs
@@ -451,6 +429,16 @@
   // re-positioning listeners the first time only — resizeHandlerBound
   // stops a replay from stacking duplicate listeners on top of the ones
   // from an earlier run.
+  //
+  // The one thing genuinely worth waiting on, ever, is the page's web
+  // fonts — if they're still swapping in when a step first measures the
+  // card, its height (and so its whole layout) can be wrong. So that
+  // waiting happens exactly once, here, before anything is shown at all
+  // — not per step. In the overwhelmingly common case the fonts are
+  // already loaded (document.fonts.ready resolves on the next microtask,
+  // imperceptible), so this adds no visible delay; it only actually
+  // pauses on a rare cold load, and even then it pauses before the
+  // overlay appears rather than causing a jump after it's already shown.
   function startTutorial(){
     try{ document.querySelector('.tab[data-tab="spark"]').click(); }catch(e){}
     document.getElementById('settingsModal').classList.remove('show');
@@ -461,22 +449,20 @@
     document.body.style.overflow = 'hidden';
     const first = STEPS[0];
     if(first.onEnter) first.onEnter();
-    renderStep();
 
     if(!resizeHandlerBound){
       resizeHandlerBound = true;
       window.addEventListener('resize', ()=>{ if(active) positionForStep(); });
       window.addEventListener('scroll', ()=>{ if(active) positionForStep(); }, {passive:true});
-      // Belt-and-suspenders for the same font-swap race schedulePositionSettle()
-      // guards against: if the browser is still finishing a web font load
-      // when the tutorial opens, re-position once it's actually done,
-      // whichever step happens to be showing at that moment.
-      try{
-        if(document.fonts && document.fonts.ready){
-          document.fonts.ready.then(()=>{ if(active) positionForStep(); });
-        }
-      }catch(e){}
     }
+
+    try{
+      if(document.fonts && document.fonts.ready){
+        document.fonts.ready.then(()=>{ if(active) renderStep(); });
+        return;
+      }
+    }catch(e){}
+    renderStep();
   }
 
   // Closes the tutorial overlay. `markSeen` records toc_tutorial_seen so

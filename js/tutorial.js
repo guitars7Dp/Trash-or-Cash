@@ -117,32 +117,30 @@
   // immediately instead of waiting on the image to load).
   //
   // `gx`/`gy` are the important part: the exact spot INSIDE his own image
-  // — as a fraction of its width/height, from the top-left corner — where
-  // his hands/paws/feet actually make contact. Measured by eye off the
-  // real art: e.g. hang's raised paws sit right at the top-center of that
-  // image (gx 0.50, gy 0.06), pawup's feet are almost at the bottom
-  // (gy 0.97). Positioning locks THAT point exactly onto the target edge,
-  // so it always reads as him actually gripping/standing/lying on
-  // something real — never floating near it with a gap.
+  // — as a fraction of its full width/height, from the top-left corner —
+  // where his hands/paws/feet actually make contact. Measured directly
+  // off the real source files (see ROCCO_POSES below for how). Positioning
+  // locks THAT point exactly onto the target edge, so it always reads as
+  // him actually gripping/standing/lying on something real — never
+  // floating near it with a gap.
+  // Every value below was re-measured directly off the actual files
+  // Derek sent (not a local stand-in): each one is a full 1024×1024
+  // square canvas with Rocco occupying only part of it — NOT a tight
+  // crop the way every earlier measurement here assumed. That mismatch
+  // (measuring contact points as fractions of a tight crop, then
+  // applying those fractions to a padded square) is why positioning
+  // never fully converged no matter how precisely any single number was
+  // tuned: the coordinate space itself was wrong. `ratio` is 1 for all
+  // of them now (square), and `w` is scaled up from the old tight-crop
+  // widths to account for how much of the canvas is empty padding, so
+  // Rocco's actual rendered size stays about the same as before.
   const ROCCO_POSES = {
-    // gy re-measured directly off the pixels (was 0.78 — a real error, not
-    // just a tuning nudge): his belly/contact line actually sits at 90%
-    // down the image, not 78%. That's why he kept rendering well inside
-    // whatever he was supposed to be lying ON TOP of.
-    nap:      { src: 'images/NappingRoccoBGRemoved.png',                 w: 190, ratio: 0.65, gx: 0.45, gy: 0.90, alt: 'Rocco napping' },
-    peekTop:  { src: 'images/PeekOverTopRoccoBGRemoved.png',             w: 150, ratio: 0.88, gx: 0.48, gy: 0.80, alt: 'Rocco peeking over the top' },
-    // Measured seat line (ignoring his tail, which naturally dangles
-    // lower and isn't the contact point): ~0.77, close to what was here.
-    dangle:   { src: 'images/HoldingSingleCoinRoccoBGRemoved.png',       w: 140, ratio: 1.40, gx: 0.42, gy: 0.77, alt: 'Rocco sitting with a coin' },
-    // gx measured precisely off the actual pixels: the flat vertical line
-    // where his body is cropped (left over from the original prop he was
-    // leaning on) sits at a constant 14.1% of the image width for nearly
-    // his whole silhouette — that's the line that has to land exactly on
-    // a real edge, not his paw (which reaches slightly further out, past
-    // that line, the way a hand curls over the front face of a ledge).
-    peekSide: { src: 'images/PeekingAroundCross-EyedRoccoBGRemoved.png', w: 135, ratio: 1.59, gx: 0.141, gy: 0.68, alt: 'Rocco peeking around the side' },
-    hang:     { src: 'images/HangingRoccoBGRemoved.png',                 w: 125, ratio: 1.95, gx: 0.50, gy: 0.06, alt: 'Rocco hanging' },
-    pawup:    { src: 'images/DollarBillWavingRoccoBGRemoved.png',        w: 155, ratio: 1.32, gx: 0.40, gy: 0.97, alt: 'Rocco waving' },
+    nap:      { src: 'images/NappingRoccoBGRemoved.png',                 w: 234, ratio: 1, gx: 0.50,  gy: 0.86,  alt: 'Rocco napping' },
+    peekTop:  { src: 'images/PeekOverTopRoccoBGRemoved.png',             w: 271, ratio: 1, gx: 0.49,  gy: 0.823, alt: 'Rocco peeking over the top' },
+    dangle:   { src: 'images/HoldingSingleCoinRoccoBGRemoved.png',       w: 264, ratio: 1, gx: 0.42,  gy: 0.68,  alt: 'Rocco sitting with a coin' },
+    peekSide: { src: 'images/PeekingAroundCross-EyedRoccoBGRemoved.png', w: 246, ratio: 1, gx: 0.113, gy: 0.70,  alt: 'Rocco peeking around the side' },
+    hang:     { src: 'images/HangingRoccoBGRemoved.png',                 w: 292, ratio: 1, gx: 0.49,  gy: 0.055, alt: 'Rocco hanging' },
+    pawup:    { src: 'images/DollarBillWavingRoccoBGRemoved.png',        w: 260, ratio: 1, gx: 0.234, gy: 0.90,  alt: 'Rocco waving' },
   };
 
   // Positions #tutRocco so its grip point lands exactly on a real edge.
@@ -213,7 +211,7 @@
   const STEPS = [
     {
       target: null,
-      rocco: { pose: 'pawup', edge: 'top', along: 0.5, dy: 55 },
+      rocco: { pose: 'pawup', edge: 'top', along: 0.5 },
       title: "Hey, I'm Rocco!",
       text: "I dig into a gig offer and tell you if it's actually worth taking. Feed me the details and I'll instantly compare it against the $/hr you want to make — after gas — so you know right away if it's CASH or TRASH. Let me show you around in a few quick steps."
     },
@@ -225,7 +223,7 @@
     },
     {
       target: '#panel-spark .required-block',
-      rocco: { pose: 'peekSide', ref: 'target', edge: 'left', along: 0.35, dx: -24 },
+      rocco: { pose: 'peekSide', ref: 'target', edge: 'left', along: 0.35 },
       title: 'The must-haves',
       text: "These are the only fields you really need — how long the offer says it'll take, how many miles, and what it pays."
     },
@@ -240,7 +238,7 @@
       onEnter: openMorePanel,
       onExit: closeMorePanel,
       cardDx: -40,
-      rocco: { pose: 'peekSide', ref: 'target', edge: 'right', flip: true, along: 0.3, dx: 24 },
+      rocco: { pose: 'peekSide', ref: 'target', edge: 'right', flip: true, along: 0.3 },
       title: 'More details (optional)',
       text: "Got a return trip? Tap here to add it in. It's never required, but it sharpens the math."
     },
@@ -256,7 +254,7 @@
     },
     {
       target: '#clearFieldsBtn',
-      rocco: { pose: 'peekTop', edge: 'top', along: 0.75, dy: -15 },
+      rocco: { pose: 'peekTop', edge: 'top', along: 0.75 },
       title: 'Clear fields',
       text: "Done with this offer? Tap here to wipe the current tab's fields for the next one."
     },
@@ -264,7 +262,7 @@
       target: '#verdictCard',
       onEnter: showDemoResult,
       onExit: hideDemoResult,
-      rocco: { pose: 'dangle', ref: 'target', edge: 'top', along: 0.35, dy: 18 },
+      rocco: { pose: 'dangle', ref: 'target', edge: 'top', along: 0.35 },
       title: 'CASH or TRASH',
       text: "This is the verdict. CASH means the offer meets or beats your target pay per hour after gas — TRASH means it falls short. The stats below break down net pay, gross pay, fuel cost, and time."
     },
@@ -281,7 +279,7 @@
       // Same dx correction applied to 3 and 5 (measured: their target's
       // real DOM edge sits noticeably inside its visible border) —
       // extended here on the same pattern, though this one's unconfirmed.
-      rocco: { pose: 'peekSide', ref: 'target', edge: 'right', flip: true, along: 0.55, dx: 24 },
+      rocco: { pose: 'peekSide', ref: 'target', edge: 'right', flip: true, along: 0.55 },
       title: 'Your numbers',
       text: "Tap the gear to set your target $/hr, your vehicle's MPG, and gas price. I'll remember them for every calculation, and you can always come back here to change them anytime."
     },
@@ -292,13 +290,13 @@
       // something below him. gx/gy override the pose's default (feet)
       // grip point with his hand's actual position in the art, measured
       // the same way as the other poses.
-      rocco: { pose: 'pawup', ref: 'target', edge: 'bottom', along: 0.4, gx: 0.65, gy: 0.03 },
+      rocco: { pose: 'pawup', ref: 'target', edge: 'bottom', along: 0.4, gx: 0.50, gy: 0.12 },
       title: 'Light or dark',
       text: 'Tap this anytime to switch between light and dark mode.'
     },
     {
       target: null,
-      rocco: { pose: 'nap', edge: 'top', along: 0.75, dy: -60 },
+      rocco: { pose: 'nap', edge: 'top', along: 0.75 },
       title: "That's the tour!",
       text: "Find me again anytime under Settings — TUTORIAL for the full walkthrough, or HELP & FAQ for quick answers. Let's get your numbers set up."
     }
@@ -369,19 +367,12 @@
       left = Math.max(10, Math.min(left, window.innerWidth - cardWidth - 10));
       card.style.top = top + 'px';
       card.style.left = left + 'px';
-      // For "ref: target" poses, hand positionRocco the SPOTLIGHT's edge
-      // (rect padded out by the same `pad` used above), not the target
-      // element's own raw edge. The spotlight's glowing outline is the
-      // only line actually visible on screen around a highlighted
-      // element — the element's real DOM edge sits `pad`px inside it,
-      // invisible. Gripping/lying against the padded rect is what
-      // actually lands on the line the user can see.
-      const paddedTargetRect = {
-        left: rect.left - pad, top: rect.top - pad,
-        right: rect.right + pad, bottom: rect.bottom + pad,
-        width: rect.width + pad*2, height: rect.height + pad*2
-      };
-      positionRocco(step, card.getBoundingClientRect(), paddedTargetRect);
+      // Grip the target element's own real edge — not the spotlight's
+      // glowing outline (which sits `pad`px further out). The outline is
+      // decorative; the element's actual edge is the only line that's
+      // still there regardless of the spotlight, so that's what he needs
+      // to actually be touching.
+      positionRocco(step, card.getBoundingClientRect(), rect);
     } else {
       // Still dim the background even with nothing spotlighted (previously
       // this branch skipped the scrim entirely, which worked fine for a

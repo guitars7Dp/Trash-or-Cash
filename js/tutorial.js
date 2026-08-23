@@ -97,24 +97,33 @@
   // Six poses in images/, each anchoring to a different edge of the
   // free-floating text. `w` is the pose's display width in px — heights
   // follow automatically from each image's own aspect ratio.
+  // `ratio` is each pose's own height ÷ width, measured ahead of time —
+  // used to compute his on-screen height immediately, instead of reading
+  // it back from the <img> element, which can still report 0 or a
+  // leftover value from the previous pose the instant a new image src is
+  // set and hasn't finished loading yet.
   const ROCCO_POSES = {
-    nap:      { src: 'images/NappingRoccoBGRemoved.png',                 w: 190, alt: 'Rocco napping' },
-    peekTop:  { src: 'images/PeekOverTopRoccoBGRemoved.png',             w: 150, alt: 'Rocco peeking over the top' },
-    dangle:   { src: 'images/HoldingSingleCoinRoccoBGRemoved.png',       w: 140, alt: 'Rocco sitting with a coin' },
-    peekSide: { src: 'images/PeekingAroundCross-EyedRoccoBGRemoved.png', w: 135, alt: 'Rocco peeking around the side' },
-    hang:     { src: 'images/HangingRoccoBGRemoved.png',                 w: 125, alt: 'Rocco hanging' },
-    pawup:    { src: 'images/DollarBillWavingRoccoBGRemoved.png',        w: 155, alt: 'Rocco waving' },
+    nap:      { src: 'images/NappingRoccoBGRemoved.png',                 w: 190, ratio: 0.65, alt: 'Rocco napping' },
+    peekTop:  { src: 'images/PeekOverTopRoccoBGRemoved.png',             w: 150, ratio: 0.88, alt: 'Rocco peeking over the top' },
+    dangle:   { src: 'images/HoldingSingleCoinRoccoBGRemoved.png',       w: 140, ratio: 1.40, alt: 'Rocco sitting with a coin' },
+    peekSide: { src: 'images/PeekingAroundCross-EyedRoccoBGRemoved.png', w: 135, ratio: 1.59, alt: 'Rocco peeking around the side' },
+    hang:     { src: 'images/HangingRoccoBGRemoved.png',                 w: 125, ratio: 1.95, alt: 'Rocco hanging' },
+    pawup:    { src: 'images/DollarBillWavingRoccoBGRemoved.png',        w: 155, ratio: 1.32, alt: 'Rocco waving' },
   };
 
   // Positions #tutRocco against the just-placed #tutCard. `anchor` picks
   // which corner/edge of the card the image locks to before dx/dy nudge
   // it — those two numbers are the actual tuning knobs; move Rocco
   // around per step by editing dx/dy in STEPS below until it looks right,
-  // nothing else needs to change.
+  // nothing else needs to change. GAP keeps him from touching the text
+  // at all before dx/dy are even applied — steps were overlapping the
+  // card because the old version placed him flush against its edge with
+  // no breathing room.
   //   'top-right' → above the card, right-aligned to its top edge
   //   'top-left'  → above the card, left-aligned to its top edge
   //   'left'      → beside the card's left edge, vertically centered
   //   'right'     → beside the card's right edge, vertically centered
+  const GAP = 16;
   function positionRocco(step, cardRect){
     const cfg = step.rocco;
     if(!cfg){ roccoEl.classList.remove('tut-show'); return; }
@@ -126,19 +135,19 @@
     }
     roccoEl.style.width = pose.w + 'px';
     roccoEl.style.height = 'auto';
-    const rh = roccoEl.offsetHeight || pose.w;
+    const rh = pose.w * pose.ratio;
 
     let top, left;
     switch(cfg.anchor){
       case 'top-left':
-        top = cardRect.top - rh; left = cardRect.left; break;
+        top = cardRect.top - rh - GAP; left = cardRect.left; break;
       case 'left':
-        top = cardRect.top + cardRect.height/2 - rh/2; left = cardRect.left - pose.w; break;
+        top = cardRect.top + cardRect.height/2 - rh/2; left = cardRect.left - pose.w - GAP; break;
       case 'right':
-        top = cardRect.top + cardRect.height/2 - rh/2; left = cardRect.right; break;
+        top = cardRect.top + cardRect.height/2 - rh/2; left = cardRect.right + GAP; break;
       case 'top-right':
       default:
-        top = cardRect.top - rh; left = cardRect.right - pose.w; break;
+        top = cardRect.top - rh - GAP; left = cardRect.right - pose.w; break;
     }
     top += (cfg.dy || 0);
     left += (cfg.dx || 0);
@@ -146,7 +155,7 @@
     // above assumes there's room beside/above the card, which isn't
     // always true on a phone, so clamp back inside the visible area
     // with a small margin.
-    const margin = 6;
+    const margin = 8;
     left = Math.max(margin, Math.min(left, window.innerWidth - pose.w - margin));
     top = Math.max(margin, Math.min(top, window.innerHeight - rh - margin));
     roccoEl.style.top = top + 'px';
@@ -211,19 +220,19 @@
       target: '#watchBadge',
       onEnter: showDemoWatch,
       onExit: hideDemoWatch,
-      rocco: { pose: 'hang', anchor: 'top-right', dx: 4, dy: 4 },
+      rocco: { pose: 'hang', anchor: 'top-right', dx: 4, dy: -60 },
       title: "Keep this on your radar",
       text: "When an offer is TRASH but within $3 of your target, I'll flag it like this. Handy on Spark, where offers often bump up a bit at a time — watch for the number I'm pointing at, and grab it the moment it lands."
     },
     {
       target: '#settingsBtn',
-      rocco: { pose: 'peekSide', anchor: 'right', dx: 6, dy: 0 },
+      rocco: { pose: 'peekSide', anchor: 'right', dx: 6, dy: 50 },
       title: 'Your numbers',
       text: "Tap the gear to set your target $/hr, your vehicle's MPG, and gas price. I'll remember them for every calculation, and you can always come back here to change them anytime."
     },
     {
       target: '#themeBtn',
-      rocco: { pose: 'pawup', anchor: 'left', dx: -6, dy: 0 },
+      rocco: { pose: 'pawup', anchor: 'left', dx: -6, dy: 50 },
       title: 'Light or dark',
       text: 'Tap this anytime to switch between light and dark mode.'
     },

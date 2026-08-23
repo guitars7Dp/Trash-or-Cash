@@ -112,53 +112,29 @@
   // see the functions above).
 
   // ---------- Rocco pose art ----------
-  // Six poses in images/. `w` is display width in px (height follows from
-  // `ratio`, height÷width, measured ahead of time so his size is correct
-  // immediately instead of waiting on the image to load).
-  //
-  // `gx`/`gy` are the important part: the exact spot INSIDE his own image
-  // — as a fraction of its full width/height, from the top-left corner —
-  // where his hands/paws/feet actually make contact. Measured directly
-  // off the real source files (see ROCCO_POSES below for how). Positioning
-  // locks THAT point exactly onto the target edge, so it always reads as
-  // him actually gripping/standing/lying on something real — never
-  // floating near it with a gap.
-  // Every value below was re-measured directly off the actual files
-  // Derek sent (not a local stand-in): each one is a full 1024×1024
-  // square canvas with Rocco occupying only part of it — NOT a tight
-  // crop the way every earlier measurement here assumed. That mismatch
-  // (measuring contact points as fractions of a tight crop, then
-  // applying those fractions to a padded square) is why positioning
-  // never fully converged no matter how precisely any single number was
-  // tuned: the coordinate space itself was wrong. `ratio` is 1 for all
-  // of them now (square), and `w` is scaled up from the old tight-crop
-  // widths to account for how much of the canvas is empty padding, so
-  // Rocco's actual rendered size stays about the same as before.
+  // Folded on trying to plant him realistically on whatever app element
+  // each step points at — five separate attempts at that (contact-point
+  // math, per-step size overrides, re-anchoring to the card vs. the
+  // target) kept surfacing a new device- or layout-specific failure
+  // every time, because it depended on precise geometry of real app UI
+  // that shifts across screens. He now lives in ONE fixed spot — inside
+  // the card itself, top-center, in a strip of padding reserved just for
+  // him (see #tutCard's padding-top in the CSS) — on every single step,
+  // on every device, full stop. `w` is his display width; every pose
+  // image is a square 1024×1024 canvas so height matches.
   const ROCCO_POSES = {
-    nap:      { src: 'images/NappingRoccoBGRemoved.png',                 w: 234, ratio: 1, gx: 0.50,  gy: 0.86,  alt: 'Rocco napping' },
-    peekTop:  { src: 'images/PeekOverTopRoccoBGRemoved.png',             w: 271, ratio: 1, gx: 0.49,  gy: 0.823, alt: 'Rocco peeking over the top' },
-    dangle:   { src: 'images/HoldingSingleCoinRoccoBGRemoved.png',       w: 264, ratio: 1, gx: 0.42,  gy: 0.68,  alt: 'Rocco sitting with a coin' },
-    peekSide: { src: 'images/PeekingAroundCross-EyedRoccoBGRemoved.png', w: 246, ratio: 1, gx: 0.113, gy: 0.70,  alt: 'Rocco peeking around the side' },
-    hang:     { src: 'images/HangingRoccoBGRemoved.png',                 w: 292, ratio: 1, gx: 0.49,  gy: 0.055, alt: 'Rocco hanging' },
-    pawup:    { src: 'images/DollarBillWavingRoccoBGRemoved.png',        w: 260, ratio: 1, gx: 0.234, gy: 0.90,  alt: 'Rocco waving' },
+    nap:      { src: 'images/NappingRoccoBGRemoved.png',                 w: 78, alt: 'Rocco napping' },
+    peekTop:  { src: 'images/PeekOverTopRoccoBGRemoved.png',             w: 90, alt: 'Rocco peeking over the top' },
+    peekSide: { src: 'images/PeekingAroundCross-EyedRoccoBGRemoved.png', w: 82, alt: 'Rocco peeking around the side' },
+    hang:     { src: 'images/HangingRoccoBGRemoved.png',                 w: 96, alt: 'Rocco hanging' },
+    pawup:    { src: 'images/DollarBillWavingRoccoBGRemoved.png',        w: 86, alt: 'Rocco waving' },
   };
 
-  // Positions #tutRocco so its grip point lands exactly on a real edge.
-  // Each step's `rocco` config says which edge and where along it:
-  //   edge: 'top' | 'bottom' | 'left' | 'right'  — which side of the
-  //         reference rect his grip point attaches to
-  //   ref:  'card' (default) — the tutorial text box's own edge, or
-  //         'target' — the actual spotlighted app element's edge (the
-  //         button/badge itself), for poses that should grab or hang
-  //         from THAT instead of the text box
-  //   along: 0–1 — where along that edge (left-to-right for top/bottom,
-  //         top-to-bottom for left/right)
-  //   flip: true — mirrors the art horizontally (peekSide is drawn
-  //         gripping with its left paw; flip it to grip with its right
-  //         when he's peeking around a box's right-hand edge instead)
-  //   dx/dy: small optional nudge in px, once the real contact point is
-  //         already correct — not the primary tool anymore
-  function positionRocco(step, cardRect, targetRect){
+  // Places #tutRocco inside the card's own reserved top strip, centered.
+  // No target geometry, no edge/along/grip-point math — just the card's
+  // rect (already on-screen and already clamped to the viewport by
+  // positionForStep) and a fixed inset. That's the whole function now.
+  function positionRocco(step, cardRect){
     const cfg = step.rocco;
     if(!cfg){ roccoEl.classList.remove('tut-show'); return; }
     const pose = ROCCO_POSES[cfg.pose];
@@ -167,83 +143,38 @@
       roccoEl.alt = pose.alt;
       roccoEl.setAttribute('data-pose', cfg.pose);
     }
-    // A step can also override the rendered width (cfg.w) — some spots
-    // (a small header icon, a tight corner) don't have room for a pose
-    // at its default size without it either getting clamped back onto
-    // the wrong spot or swallowing whatever it's supposed to be next to.
-    const w = cfg.w || pose.w;
-    roccoEl.style.width = w + 'px';
+    roccoEl.style.width = pose.w + 'px';
     roccoEl.style.height = 'auto';
-    roccoEl.style.transform = cfg.flip ? 'scaleX(-1)' : 'none';
-    const rh = w * pose.ratio;
+    roccoEl.style.transform = 'none';
 
-    const ref = (cfg.ref === 'target' && targetRect) ? targetRect : cardRect;
-    let ex, ey;
-    switch(cfg.edge){
-      case 'bottom': ex = ref.left + (cfg.along ?? 0.5) * ref.width; ey = ref.bottom; break;
-      case 'left':   ex = ref.left; ey = ref.top + (cfg.along ?? 0.5) * ref.height; break;
-      case 'right':  ex = ref.right; ey = ref.top + (cfg.along ?? 0.5) * ref.height; break;
-      case 'top':
-      default:       ex = ref.left + (cfg.along ?? 0.5) * ref.width; ey = ref.top; break;
-    }
-
-    // A step can override which point on the pose makes contact (gx/gy)
-    // instead of using the pose's default grip point — e.g. pawup's
-    // default grip is his feet (for standing ON something), but a step
-    // that has him reaching UP to grab a button above him needs his
-    // raised hand to be the contact point instead.
-    const baseGx = cfg.gx ?? pose.gx;
-    const baseGy = cfg.gy ?? pose.gy;
-    const gx = cfg.flip ? (1 - baseGx) : baseGx;
-    let left = ex - gx * w + (cfg.dx || 0);
-    let top = ey - baseGy * rh + (cfg.dy || 0);
-
-    // Keep him fully on-screen on narrow phones — only kicks in if the
-    // exact contact point would otherwise push him off the viewport edge.
-    // (Tried dropping the vertical half of this once, betting the clamp
-    // itself was the bug on the centered intro/outro steps — it wasn't;
-    // without it he rendered entirely off the top of the screen there,
-    // which is strictly worse. Kept as a safety net; the actual "too far
-    // up" cause is being corrected directly via dy below instead.)
-    const margin = 8;
-    left = Math.max(margin, Math.min(left, window.innerWidth - w - margin));
-    top = Math.max(margin, Math.min(top, window.innerHeight - rh - margin));
-    roccoEl.style.top = top + 'px';
-    roccoEl.style.left = left + 'px';
+    const inset = 10;
+    roccoEl.style.top = (cardRect.top + inset) + 'px';
+    roccoEl.style.left = (cardRect.left + cardRect.width/2 - pose.w/2) + 'px';
     roccoEl.classList.add('tut-show');
   }
 
   const STEPS = [
     {
       target: null,
-      rocco: { pose: 'pawup', edge: 'top', along: 0.5 },
+      rocco: { pose: 'pawup' },
       title: "Hey, I'm Rocco!",
       text: "I dig into a gig offer and tell you if it's actually worth taking. Feed me the details and I'll instantly compare it against the $/hr you want to make — after gas — so you know right away if it's CASH or TRASH. Let me show you around in a few quick steps."
     },
     {
       target: '#tabs',
-      rocco: { pose: 'peekTop', edge: 'top', along: 0.65 },
+      rocco: { pose: 'peekTop' },
       title: 'Pick your platform',
       text: "Start here. Choose which app you're driving for — Spark, Instacart, Shipt, or Food Delivery (DoorDash, Uber Eats, Grubhub, etc.) — the fields below change to match."
     },
     {
       target: '#panel-spark .required-block',
-      rocco: { pose: 'peekSide', ref: 'target', edge: 'left', along: 0.35 },
+      rocco: { pose: 'peekSide' },
       title: 'The must-haves',
       text: "These are the only fields you really need — how long the offer says it'll take, how many miles, and what it pays."
     },
     {
       target: '#micBtn',
-      // Same issue as the radar badge: hanging from the button's BOTTOM
-      // edge put ~95% of his body straight down over every line of the
-      // card text below (the card starts almost immediately under this
-      // button, no gap to work with). Hanging from the button's TOP
-      // edge instead means that same ~95% drapes UP over the button
-      // itself — its label is short and the gold highlight ring still
-      // marks it, so that's a much smaller loss than burying five lines
-      // of instructions. Sized down too, so he only grazes the card's
-      // title instead of reaching into the paragraph.
-      rocco: { pose: 'hang', ref: 'target', edge: 'top', along: 0.75, w: 130 },
+      rocco: { pose: 'hang' },
       title: 'Tap to speak',
       text: "In a hurry? Check the offer in your gig app, then come back here and tap this to read it out loud. Switch back and forth as needed — I'll hold onto what you've already told me."
     },
@@ -252,27 +183,19 @@
       onEnter: openMorePanel,
       onExit: closeMorePanel,
       cardDx: -40,
-      rocco: { pose: 'peekSide', ref: 'target', edge: 'right', flip: true, along: 0.3 },
+      rocco: { pose: 'nap' },
       title: 'More details (optional)',
       text: "Got a return trip? Tap here to add it in. It's never required, but it sharpens the math."
     },
     {
       target: '#calculateBtn',
-      // His belly needs to rest ON the button, not hang below it —
-      // edge:'bottom' was putting the anchor line at the button's
-      // bottom edge, and since nap's belly sits 86% of the way down
-      // his own image, that meant 86% of him rendered ABOVE that
-      // line, straight into the button. edge:'top' puts the anchor at
-      // the button's top edge instead, so the same 86%-above split now
-      // lands him lying on top of the button with just his belly
-      // grazing the surface — the button's own label stays clear.
-      rocco: { pose: 'nap', ref: 'target', edge: 'top', along: 0.5 },
+      rocco: { pose: 'pawup' },
       title: 'Calculate',
       text: "I calculate automatically the moment your required fields are filled — by typing, by voice, or a mix of both across a few mic taps. Tap CALCULATE if you just want to jump straight to the verdict."
     },
     {
       target: '#clearFieldsBtn',
-      rocco: { pose: 'peekTop', edge: 'top', along: 0.75 },
+      rocco: { pose: 'peekTop' },
       title: 'Clear fields',
       text: "Done with this offer? Tap here to wipe the current tab's fields for the next one."
     },
@@ -280,13 +203,10 @@
       target: '#verdictCard',
       onEnter: showDemoResult,
       onExit: hideDemoResult,
-      // Seat stays exactly on the card's top edge (that part was
-      // finally right) — but at full size his head reached all the
-      // way up past the empty-state placeholder above the card,
-      // covering its text. Sized down and nudged a few px further
-      // into the card so his head clears that placeholder instead of
-      // overlapping it.
-      rocco: { pose: 'dangle', ref: 'target', edge: 'top', along: 0.5, w: 125, dy: 7 },
+      // Dropped the seated/dangle pose — with him living inside the card
+      // now instead of perched on a real edge, "sitting" had nothing
+      // left to sit on. Pawup (holding cash) fits this step anyway.
+      rocco: { pose: 'pawup' },
       title: 'CASH or TRASH',
       text: "This is the verdict. CASH means the offer meets or beats your target pay per hour after gas — TRASH means it falls short. The stats below break down net pay, gross pay, fuel cost, and time."
     },
@@ -294,48 +214,25 @@
       target: '#watchBadge',
       onEnter: showDemoWatch,
       onExit: hideDemoWatch,
-      // Hands were gripping the top edge correctly, but at full size
-      // his whole body hung straight down over both lines of the
-      // badge's own text. Shrunk and shifted over to hang above the
-      // radar icon on the right side of the badge instead of the
-      // words on the left.
-      rocco: { pose: 'hang', ref: 'target', edge: 'top', along: 0.85, w: 140 },
+      rocco: { pose: 'hang' },
       title: "Keep this on your radar",
       text: "When an offer is TRASH but within $3 of your target, I'll flag it like this. Handy on Spark, where offers often bump up a bit at a time — watch for the number I'm pointing at, and grab it the moment it lands."
     },
     {
       target: '#settingsBtn',
-      // Anchoring to the gear button itself was the bug: the button is
-      // much smaller than Rocco, so gripping its edge planted most of
-      // his body directly on top of it, hiding the very icon this step
-      // is pointing at. He should be peeking around the CARD (per your
-      // rule — peeking poses use the text box as the thing they peek
-      // around, not the target), sized down so a whole extra character
-      // fits in the gap between the card and the screen edge, and
-      // anchored low enough on the card's right edge to clear the gear
-      // button above entirely.
-      rocco: { pose: 'peekSide', ref: 'card', edge: 'right', flip: true, along: 0.3, w: 120 },
+      rocco: { pose: 'peekSide' },
       title: 'Your numbers',
       text: "Tap the gear to set your target $/hr, your vehicle's MPG, and gas price. I'll remember them for every calculation, and you can always come back here to change them anytime."
     },
     {
       target: '#themeBtn',
-      // The hand-grab override was fighting the screen-edge clamp: at
-      // full size, reaching up to the button from below pushed him
-      // wide enough that the phone-width clamp shoved him back to the
-      // left, off the button entirely and straight over the card's own
-      // text instead. Switched to his default standing (feet) grip,
-      // sized down, and anchored to the CARD's top edge near its right
-      // side — he now stands mostly in the open header space next to
-      // the button (his raised waving paw lands right against it)
-      // instead of draping down over the card.
-      rocco: { pose: 'pawup', ref: 'card', edge: 'top', along: 0.78, w: 90 },
+      rocco: { pose: 'peekTop' },
       title: 'Light or dark',
       text: 'Tap this anytime to switch between light and dark mode.'
     },
     {
       target: null,
-      rocco: { pose: 'nap', edge: 'top', along: 0.75 },
+      rocco: { pose: 'nap' },
       title: "That's the tour!",
       text: "Find me again anytime under Settings — TUTORIAL for the full walkthrough, or HELP & FAQ for quick answers. Let's get your numbers set up."
     }
@@ -406,12 +303,7 @@
       left = Math.max(10, Math.min(left, window.innerWidth - cardWidth - 10));
       card.style.top = top + 'px';
       card.style.left = left + 'px';
-      // Grip the target element's own real edge — not the spotlight's
-      // glowing outline (which sits `pad`px further out). The outline is
-      // decorative; the element's actual edge is the only line that's
-      // still there regardless of the spotlight, so that's what he needs
-      // to actually be touching.
-      positionRocco(step, card.getBoundingClientRect(), rect);
+      positionRocco(step, card.getBoundingClientRect());
     } else {
       // Still dim the background even with nothing spotlighted (previously
       // this branch skipped the scrim entirely, which worked fine for a

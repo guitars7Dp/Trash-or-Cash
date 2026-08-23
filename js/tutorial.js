@@ -332,6 +332,18 @@
   let stepIndex = 0;              // which STEPS entry is currently showing
   let active = false;             // whether the tutorial overlay is currently running
   let resizeHandlerBound = false; // guards against binding the resize/scroll handlers more than once across replays
+  // How far from the top of the screen a step's target gets scrolled to
+  // (see renderStep() below) — shared with positionForStep()'s fit
+  // check so both agree on how much vertical room is actually available.
+  const TARGET_TOP_MARGIN = 56;
+  // The one element currently shrunk to make room for the card (see
+  // shrinkTargetToFit() below) — tracked so it can be restored to full
+  // size the moment the tutorial moves off it, whether that's the next
+  // step or closing the tutorial entirely. This is always a *temporary*
+  // inline transform on the real app element, never a change to its
+  // actual CSS, and it's gone the instant the tutorial stops pointing
+  // at it — the app itself is untouched outside these few seconds.
+  let shrunkTarget = null;
 
   // Redraws the step-progress dots, highlighting the current step.
   function buildDots(){
@@ -358,12 +370,55 @@
   // center the card with no spotlight cutout. Called on every step change
   // and again on resize/scroll while the tutorial is active, since the
   // target's position can shift.
+  // Undoes any temporary shrink from a previous step so the app element
+  // is back to its real size the moment the tutorial stops pointing at
+  // it. Safe to call even when nothing is shrunk.
+  function restoreShrunkTarget(){
+    if(shrunkTarget){
+      shrunkTarget.style.transform = '';
+      shrunkTarget.style.transformOrigin = '';
+      shrunkTarget = null;
+    }
+  }
+
+  // If a target is simply too tall to fit alongside the card — the
+  // required-fields block wrapping all three field groups is the one
+  // that actually hits this — there's no placement above/below that
+  // avoids BOTH covering the target and pushing the card's Back/Next
+  // buttons off the bottom of the screen; on "The must-haves" step that
+  // left the tutorial un-advanceable. Rather than touch the app's own
+  // CSS (which would shrink it outside the tutorial too), this scales
+  // the target down with a temporary inline transform — measured fresh
+  // each time against the actual available space, and undone the
+  // instant the tutorial moves off it (see restoreShrunkTarget()) — so
+  // the real app is never permanently affected.
+  function shrinkTargetToFit(targetEl, cardHeight){
+    if(shrunkTarget && shrunkTarget !== targetEl) restoreShrunkTarget();
+    targetEl.style.transform = '';
+    targetEl.style.transformOrigin = '';
+    const naturalHeight = targetEl.getBoundingClientRect().height;
+    const pad = 8, gap = 16, bottomMargin = 10;
+    const available = window.innerHeight - TARGET_TOP_MARGIN - cardHeight - pad*2 - gap - bottomMargin;
+    if(naturalHeight > available && available > 60){
+      const scale = Math.max(0.55, available / naturalHeight);
+      targetEl.style.transform = 'scale(' + scale + ')';
+      targetEl.style.transformOrigin = 'top center';
+      shrunkTarget = targetEl;
+    } else {
+      shrunkTarget = null;
+    }
+  }
+
   function positionForStep(){
     const step = STEPS[stepIndex];
     const targetEl = step.target ? document.querySelector(step.target) : null;
     const pad = 8;
 
     if(targetEl){
+      const cardWidthForFit = clampCardWidth();
+      card.style.width = cardWidthForFit + 'px';
+      shrinkTargetToFit(targetEl, card.offsetHeight || 200);
+
       const rect = targetEl.getBoundingClientRect();
       spotlight.classList.add('tut-show');
       spotlight.style.top = (rect.top - pad) + 'px';
@@ -371,8 +426,7 @@
       spotlight.style.width = (rect.width + pad*2) + 'px';
       spotlight.style.height = (rect.height + pad*2) + 'px';
 
-      const cardWidth = clampCardWidth();
-      card.style.width = cardWidth + 'px';
+      const cardWidth = cardWidthForFit;
       const cardHeight = card.offsetHeight || 200;
 
       const spaceBelow = window.innerHeight - rect.bottom;
@@ -411,6 +465,7 @@
       card.style.left = left + 'px';
       positionRocco(step);
     } else {
+      restoreShrunkTarget();
       // Still dim the background even with nothing spotlighted (previously
       // this branch skipped the scrim entirely, which worked fine for a
       // solid card but left free-floating text sitting directly over the
@@ -463,9 +518,8 @@
       // targets up far enough to collide with Safari's own status/URL
       // bar chrome, so this scrolls to a fixed safe gap instead of
       // going flush to the very edge.
-      const topMargin = 56;
       const rect = targetEl.getBoundingClientRect();
-      const delta = rect.top - topMargin;
+      const delta = rect.top - TARGET_TOP_MARGIN;
       if(Math.abs(delta) > 2) window.scrollBy(0, delta);
     }
     positionForStep();
@@ -537,6 +591,7 @@
   function endTutorial(markSeen, forceOpenSettings){
     const step = STEPS[stepIndex];
     if(step && step.onExit) step.onExit();
+    restoreShrunkTarget();
     active = false;
     overlay.classList.remove('tut-active');
     spotlight.classList.remove('tut-show');

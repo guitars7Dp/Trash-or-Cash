@@ -167,10 +167,15 @@
       roccoEl.alt = pose.alt;
       roccoEl.setAttribute('data-pose', cfg.pose);
     }
-    roccoEl.style.width = pose.w + 'px';
+    // A step can also override the rendered width (cfg.w) — some spots
+    // (a small header icon, a tight corner) don't have room for a pose
+    // at its default size without it either getting clamped back onto
+    // the wrong spot or swallowing whatever it's supposed to be next to.
+    const w = cfg.w || pose.w;
+    roccoEl.style.width = w + 'px';
     roccoEl.style.height = 'auto';
     roccoEl.style.transform = cfg.flip ? 'scaleX(-1)' : 'none';
-    const rh = pose.w * pose.ratio;
+    const rh = w * pose.ratio;
 
     const ref = (cfg.ref === 'target' && targetRect) ? targetRect : cardRect;
     let ex, ey;
@@ -190,7 +195,7 @@
     const baseGx = cfg.gx ?? pose.gx;
     const baseGy = cfg.gy ?? pose.gy;
     const gx = cfg.flip ? (1 - baseGx) : baseGx;
-    let left = ex - gx * pose.w + (cfg.dx || 0);
+    let left = ex - gx * w + (cfg.dx || 0);
     let top = ey - baseGy * rh + (cfg.dy || 0);
 
     // Keep him fully on-screen on narrow phones — only kicks in if the
@@ -201,7 +206,7 @@
     // which is strictly worse. Kept as a safety net; the actual "too far
     // up" cause is being corrected directly via dy below instead.)
     const margin = 8;
-    left = Math.max(margin, Math.min(left, window.innerWidth - pose.w - margin));
+    left = Math.max(margin, Math.min(left, window.innerWidth - w - margin));
     top = Math.max(margin, Math.min(top, window.innerHeight - rh - margin));
     roccoEl.style.top = top + 'px';
     roccoEl.style.left = left + 'px';
@@ -229,7 +234,16 @@
     },
     {
       target: '#micBtn',
-      rocco: { pose: 'hang', ref: 'target', edge: 'bottom', along: 0.75 },
+      // Same issue as the radar badge: hanging from the button's BOTTOM
+      // edge put ~95% of his body straight down over every line of the
+      // card text below (the card starts almost immediately under this
+      // button, no gap to work with). Hanging from the button's TOP
+      // edge instead means that same ~95% drapes UP over the button
+      // itself — its label is short and the gold highlight ring still
+      // marks it, so that's a much smaller loss than burying five lines
+      // of instructions. Sized down too, so he only grazes the card's
+      // title instead of reaching into the paragraph.
+      rocco: { pose: 'hang', ref: 'target', edge: 'top', along: 0.75, w: 130 },
       title: 'Tap to speak',
       text: "In a hurry? Check the offer in your gig app, then come back here and tap this to read it out loud. Switch back and forth as needed — I'll hold onto what you've already told me."
     },
@@ -244,11 +258,15 @@
     },
     {
       target: '#calculateBtn',
-      // Your mark was explicit: his contact line goes on the CALCULATE
-      // button's own bottom edge, not the card's top edge — switching
-      // the reference entirely rather than continuing to nudge dy on
-      // the wrong anchor.
-      rocco: { pose: 'nap', ref: 'target', edge: 'bottom', along: 0.5 },
+      // His belly needs to rest ON the button, not hang below it —
+      // edge:'bottom' was putting the anchor line at the button's
+      // bottom edge, and since nap's belly sits 86% of the way down
+      // his own image, that meant 86% of him rendered ABOVE that
+      // line, straight into the button. edge:'top' puts the anchor at
+      // the button's top edge instead, so the same 86%-above split now
+      // lands him lying on top of the button with just his belly
+      // grazing the surface — the button's own label stays clear.
+      rocco: { pose: 'nap', ref: 'target', edge: 'top', along: 0.5 },
       title: 'Calculate',
       text: "I calculate automatically the moment your required fields are filled — by typing, by voice, or a mix of both across a few mic taps. Tap CALCULATE if you just want to jump straight to the verdict."
     },
@@ -262,7 +280,13 @@
       target: '#verdictCard',
       onEnter: showDemoResult,
       onExit: hideDemoResult,
-      rocco: { pose: 'dangle', ref: 'target', edge: 'top', along: 0.35 },
+      // Seat stays exactly on the card's top edge (that part was
+      // finally right) — but at full size his head reached all the
+      // way up past the empty-state placeholder above the card,
+      // covering its text. Sized down and nudged a few px further
+      // into the card so his head clears that placeholder instead of
+      // overlapping it.
+      rocco: { pose: 'dangle', ref: 'target', edge: 'top', along: 0.5, w: 125, dy: 7 },
       title: 'CASH or TRASH',
       text: "This is the verdict. CASH means the offer meets or beats your target pay per hour after gas — TRASH means it falls short. The stats below break down net pay, gross pay, fuel cost, and time."
     },
@@ -270,27 +294,42 @@
       target: '#watchBadge',
       onEnter: showDemoWatch,
       onExit: hideDemoWatch,
-      rocco: { pose: 'hang', ref: 'target', edge: 'top', along: 0.58 },
+      // Hands were gripping the top edge correctly, but at full size
+      // his whole body hung straight down over both lines of the
+      // badge's own text. Shrunk and shifted over to hang above the
+      // radar icon on the right side of the badge instead of the
+      // words on the left.
+      rocco: { pose: 'hang', ref: 'target', edge: 'top', along: 0.85, w: 140 },
       title: "Keep this on your radar",
       text: "When an offer is TRASH but within $3 of your target, I'll flag it like this. Handy on Spark, where offers often bump up a bit at a time — watch for the number I'm pointing at, and grab it the moment it lands."
     },
     {
       target: '#settingsBtn',
-      // Same dx correction applied to 3 and 5 (measured: their target's
-      // real DOM edge sits noticeably inside its visible border) —
-      // extended here on the same pattern, though this one's unconfirmed.
-      rocco: { pose: 'peekSide', ref: 'target', edge: 'right', flip: true, along: 0.55 },
+      // Anchoring to the gear button itself was the bug: the button is
+      // much smaller than Rocco, so gripping its edge planted most of
+      // his body directly on top of it, hiding the very icon this step
+      // is pointing at. He should be peeking around the CARD (per your
+      // rule — peeking poses use the text box as the thing they peek
+      // around, not the target), sized down so a whole extra character
+      // fits in the gap between the card and the screen edge, and
+      // anchored low enough on the card's right edge to clear the gear
+      // button above entirely.
+      rocco: { pose: 'peekSide', ref: 'card', edge: 'right', flip: true, along: 0.3, w: 120 },
       title: 'Your numbers',
       text: "Tap the gear to set your target $/hr, your vehicle's MPG, and gas price. I'll remember them for every calculation, and you can always come back here to change them anytime."
     },
     {
       target: '#themeBtn',
-      // His raised hand — not his feet — is the contact point here, since
-      // he's reaching UP to grab the button rather than standing on
-      // something below him. gx/gy override the pose's default (feet)
-      // grip point with his hand's actual position in the art, measured
-      // the same way as the other poses.
-      rocco: { pose: 'pawup', ref: 'target', edge: 'bottom', along: 0.4, gx: 0.50, gy: 0.12 },
+      // The hand-grab override was fighting the screen-edge clamp: at
+      // full size, reaching up to the button from below pushed him
+      // wide enough that the phone-width clamp shoved him back to the
+      // left, off the button entirely and straight over the card's own
+      // text instead. Switched to his default standing (feet) grip,
+      // sized down, and anchored to the CARD's top edge near its right
+      // side — he now stands mostly in the open header space next to
+      // the button (his raised waving paw lands right against it)
+      // instead of draping down over the card.
+      rocco: { pose: 'pawup', ref: 'card', edge: 'top', along: 0.78, w: 90 },
       title: 'Light or dark',
       text: 'Tap this anytime to switch between light and dark mode.'
     },

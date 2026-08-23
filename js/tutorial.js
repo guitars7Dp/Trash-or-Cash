@@ -9,6 +9,20 @@
   const spotlight = document.getElementById('tutSpotlight');
   const card = document.getElementById('tutCard');
   const roccoEl = document.getElementById('tutRocco');
+  // Two small decorative fixtures, created here (not in the HTML) so the
+  // paste-in stays to just these two files, and appended into the card
+  // itself so they scale/reposition with it automatically. #tutBar is a
+  // little rod near the top of the card's reserved header strip for
+  // hang to grip from above; #tutShelf is a ledge near the bottom of
+  // that strip for everyone else to stand, sit, lie, or peek around —
+  // see positionRocco() below for how each pose uses them. Styling is
+  // in the CSS.
+  const roccoBar = document.createElement('div');
+  roccoBar.id = 'tutBar';
+  card.appendChild(roccoBar);
+  const roccoShelf = document.createElement('div');
+  roccoShelf.id = 'tutShelf';
+  card.appendChild(roccoShelf);
   const dotsEl = document.getElementById('tutDots');
   const progressEl = document.getElementById('tutProgress');
   const titleEl = document.getElementById('tutTitle');
@@ -112,31 +126,56 @@
   // see the functions above).
 
   // ---------- Rocco pose art ----------
-  // Folded on trying to plant him realistically on whatever app element
-  // each step points at — five separate attempts at that (contact-point
-  // math, per-step size overrides, re-anchoring to the card vs. the
-  // target) kept surfacing a new device- or layout-specific failure
-  // every time, because it depended on precise geometry of real app UI
-  // that shifts across screens. He now lives in ONE fixed spot — inside
-  // the card itself, top-center, in a strip of padding reserved just for
-  // him (see #tutCard's padding-top in the CSS) — on every single step,
-  // on every device, full stop. `w` is his display width; every pose
-  // image is a square 1024×1024 canvas so height matches.
+  // He lives inside the card's reserved header strip on every step (see
+  // #tutCard's padding-top in the CSS) — that part didn't change. What's
+  // back is a real contact point for each pose to land on, without going
+  // back to anchoring off real app elements (that's what kept breaking
+  // across devices). #tutBar and #tutShelf, created above, are two small
+  // fixtures that live inside the card itself, so their position is 100%
+  // ours — no dependency on the app's layout at all:
+  //   - #tutBar:   a little rod near the TOP of the strip. Only `hang`
+  //     uses it, gripping its underside with both hands, dangling down.
+  //   - #tutShelf: a ledge nearer the BOTTOM of the strip. Everyone else
+  //     uses it — lying on top of it (nap), standing on it (pawup),
+  //     peeking over its top edge (peekTop), or peeking around its left/
+  //     right end (peekSide).
+  // `anchor` below says which fixture + which edge of it a pose uses.
+  // `gx`/`gy` are the exact spot inside that pose's own 1024×1024 image
+  // — as a fraction of its width/height — where the hands/paws/feet
+  // actually make contact, measured directly off the real art, same as
+  // before. Locking that point onto the fixture's edge is what makes it
+  // read as him actually gripping/standing/lying on something, instead
+  // of just floating near it.
+  // `cx` (shelf-top/bar-bottom poses only) is the pose's own visible-
+  // content center, as a fraction of its 1024px canvas width — measured
+  // from the actual alpha-channel bounding box, not assumed. Needed
+  // because a pose's art isn't always padded evenly left/right inside
+  // its square canvas (seatedCoin's tail sticks out well to the left of
+  // his body), so centering on the raw canvas width alone would still
+  // look off-center. Omit it and it defaults to 0.5 (true canvas center).
   const ROCCO_POSES = {
-    nap:      { src: 'images/NappingRoccoBGRemoved.png',                 w: 78, alt: 'Rocco napping' },
-    peekTop:  { src: 'images/PeekOverTopRoccoBGRemoved.png',             w: 90, alt: 'Rocco peeking over the top' },
-    peekSide: { src: 'images/PeekingAroundCross-EyedRoccoBGRemoved.png', w: 82, alt: 'Rocco peeking around the side' },
-    hang:     { src: 'images/HangingRoccoBGRemoved.png',                 w: 96, alt: 'Rocco hanging' },
-    pawup:    { src: 'images/DollarBillWavingRoccoBGRemoved.png',        w: 86, alt: 'Rocco waving' },
+    nap:        { src: 'images/NappingRoccoBGRemoved.png',                 w: 88,  gx: 0.50,  gy: 0.86,  anchor: 'shelf-top',   alt: 'Rocco napping' },
+    peekTop:    { src: 'images/PeekOverTopRoccoBGRemoved.png',             w: 100, gx: 0.49,  gy: 0.823, anchor: 'shelf-top',   alt: 'Rocco peeking over the top' },
+    peekSide:   { src: 'images/PeekingAroundCross-EyedRoccoBGRemoved.png', w: 72,  gx: 0.113, gy: 0.70,  anchor: 'shelf-side',  alt: 'Rocco peeking around the side' },
+    hang:       { src: 'images/HangingRoccoBGRemoved.png',                 w: 100, gx: 0.49,  gy: 0.055, anchor: 'bar-bottom',  alt: 'Rocco hanging' },
+    pawup:      { src: 'images/DollarBillWavingRoccoBGRemoved.png',        w: 96,  gx: 0.234, gy: 0.90,  anchor: 'shelf-top',   alt: 'Rocco waving' },
+    seatedCoin: { src: 'images/HoldingSingleCoinRoccoBGRemoved.png',       w: 92,  cx: 0.424, gy: 0.70,  anchor: 'shelf-top',   alt: 'Rocco sitting with a coin' },
   };
 
-  // Places #tutRocco inside the card's own reserved top strip, centered.
-  // No target geometry, no edge/along/grip-point math — just the card's
-  // rect (already on-screen and already clamped to the viewport by
-  // positionForStep) and a fixed inset. That's the whole function now.
-  function positionRocco(step, cardRect){
+  // Places #tutRocco against #tutBar or #tutShelf per the pose's anchor.
+  // Both fixtures are real elements inside the card, so their rects are
+  // just measured directly — no target geometry, no viewport-dependent
+  // math, nothing that changes across devices.
+  //   flip: true — for peekSide only, grips the shelf's LEFT end instead
+  //         of its default right end (also mirrors the art to match).
+  function positionRocco(step){
     const cfg = step.rocco;
-    if(!cfg){ roccoEl.classList.remove('tut-show'); return; }
+    if(!cfg){
+      roccoEl.classList.remove('tut-show');
+      roccoBar.style.opacity = '0';
+      roccoShelf.style.opacity = '0';
+      return;
+    }
     const pose = ROCCO_POSES[cfg.pose];
     if(roccoEl.getAttribute('data-pose') !== cfg.pose){
       roccoEl.src = pose.src;
@@ -145,11 +184,50 @@
     }
     roccoEl.style.width = pose.w + 'px';
     roccoEl.style.height = 'auto';
-    roccoEl.style.transform = 'none';
 
-    const inset = 10;
-    roccoEl.style.top = (cardRect.top + inset) + 'px';
-    roccoEl.style.left = (cardRect.left + cardRect.width/2 - pose.w/2) + 'px';
+    const shelf = roccoShelf.getBoundingClientRect();
+    const bar = roccoBar.getBoundingClientRect();
+
+    // Only the fixture actually being used is shown — otherwise an idle
+    // ledge/bar with nothing on it just reads as visual clutter, and (for
+    // the hang pose) his dangling feet could visually graze an unused shelf.
+    roccoBar.style.opacity = (pose.anchor === 'bar-bottom') ? '1' : '0';
+    roccoShelf.style.opacity = (pose.anchor === 'bar-bottom') ? '0' : '1';
+
+    let ex, ey, left;
+    if(pose.anchor === 'bar-bottom'){
+      ex = bar.left + bar.width/2;
+      ey = bar.bottom;
+      // Centered on the bar by his actual displayed width, not by gx —
+      // gx marks where his paws grip, which isn't always the horizontal
+      // center of the artwork, and centering on gx made him look
+      // noticeably off-center even though the grip point was "correct."
+      left = ex - (pose.cx ?? 0.5) * pose.w;
+      roccoEl.style.transform = 'none';
+    } else if(pose.anchor === 'shelf-side'){
+      // Peeking around something only reads as "peeking" if he sits a
+      // little off to one side — but anchoring him to the shelf's actual
+      // edge (75px+ from card center) pushed him almost off the card
+      // entirely. Use a small fixed offset from the shelf's own center
+      // instead, so he's clearly leaning to one side without looking
+      // like he fell out of the frame.
+      const rightEnd = !cfg.flip;
+      const off = 22;
+      const shelfCenterX = shelf.left + shelf.width/2;
+      ex = rightEnd ? (shelfCenterX + off) : (shelfCenterX - off);
+      ey = shelf.top + shelf.height/2;
+      const gx = rightEnd ? pose.gx : (1 - pose.gx);
+      left = ex - gx * pose.w;
+      roccoEl.style.transform = rightEnd ? 'none' : 'scaleX(-1)';
+    } else { // shelf-top
+      ex = shelf.left + shelf.width/2;
+      ey = shelf.top;
+      left = ex - (pose.cx ?? 0.5) * pose.w;
+      roccoEl.style.transform = 'none';
+    }
+
+    roccoEl.style.left = left + 'px';
+    roccoEl.style.top = (ey - pose.gy * pose.w) + 'px';
     roccoEl.classList.add('tut-show');
   }
 
@@ -203,10 +281,10 @@
       target: '#verdictCard',
       onEnter: showDemoResult,
       onExit: hideDemoResult,
-      // Dropped the seated/dangle pose — with him living inside the card
-      // now instead of perched on a real edge, "sitting" had nothing
-      // left to sit on. Pawup (holding cash) fits this step anyway.
-      rocco: { pose: 'pawup' },
+      // Now that #tutShelf gives him something real to sit on, the
+      // seated/coin pose is back — and it's the strongest thematic fit
+      // in the whole set for the CASH/TRASH verdict specifically.
+      rocco: { pose: 'seatedCoin' },
       title: 'CASH or TRASH',
       text: "This is the verdict. CASH means the offer meets or beats your target pay per hour after gas — TRASH means it falls short. The stats below break down net pay, gross pay, fuel cost, and time."
     },
@@ -220,7 +298,7 @@
     },
     {
       target: '#settingsBtn',
-      rocco: { pose: 'peekSide' },
+      rocco: { pose: 'peekSide', flip: true },
       title: 'Your numbers',
       text: "Tap the gear to set your target $/hr, your vehicle's MPG, and gas price. I'll remember them for every calculation, and you can always come back here to change them anytime."
     },
@@ -303,7 +381,7 @@
       left = Math.max(10, Math.min(left, window.innerWidth - cardWidth - 10));
       card.style.top = top + 'px';
       card.style.left = left + 'px';
-      positionRocco(step, card.getBoundingClientRect());
+      positionRocco(step);
     } else {
       // Still dim the background even with nothing spotlighted (previously
       // this branch skipped the scrim entirely, which worked fine for a
@@ -322,7 +400,7 @@
       const cardHeight = card.offsetHeight || 200;
       card.style.left = ((window.innerWidth - cardWidth) / 2) + 'px';
       card.style.top = Math.max(10, (window.innerHeight - cardHeight) / 2) + 'px';
-      positionRocco(step, card.getBoundingClientRect());
+      positionRocco(step);
     }
   }
 

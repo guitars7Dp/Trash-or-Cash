@@ -166,25 +166,25 @@
   const STEPS = [
     {
       target: null,
-      rocco: { pose: 'pawup', anchor: 'right', dx: 6, dy: 40 },
+      rocco: { pose: 'pawup', anchor: 'top-right', dx: 0, dy: 20 },
       title: "Hey, I'm Rocco!",
       text: "I dig into a gig offer and tell you if it's actually worth taking. Feed me the details and I'll instantly compare it against the $/hr you want to make — after gas — so you know right away if it's CASH or TRASH. Let me show you around in a few quick steps."
     },
     {
       target: '#tabs',
-      rocco: { pose: 'peekTop', anchor: 'top-right', dx: 4, dy: 6 },
+      rocco: { pose: 'peekTop', anchor: 'top-right', dx: 4, dy: 40 },
       title: 'Pick your platform',
       text: "Start here. Choose which app you're driving for — Spark, Instacart, Shipt, or Food Delivery (DoorDash, Uber Eats, Grubhub, etc.) — the fields below change to match."
     },
     {
       target: '#panel-spark .required-block',
-      rocco: { pose: 'peekSide', anchor: 'left', dx: -6, dy: 0 },
+      rocco: { pose: 'peekSide', anchor: 'left', dx: -20, dy: 0 },
       title: 'The must-haves',
       text: "These are the only fields you really need — how long the offer says it'll take, how many miles, and what it pays."
     },
     {
       target: '#micBtn',
-      rocco: { pose: 'hang', anchor: 'top-right', dx: 4, dy: 4 },
+      rocco: { pose: 'hang', anchor: 'top-right', dx: 4, dy: 20 },
       title: 'Tap to speak',
       text: "In a hurry? Check the offer in your gig app, then come back here and tap this to read it out loud. Switch back and forth as needed — I'll hold onto what you've already told me."
     },
@@ -192,19 +192,20 @@
       target: '.more-toggle[data-more="spark"]',
       onEnter: openMorePanel,
       onExit: closeMorePanel,
-      rocco: { pose: 'peekSide', anchor: 'right', dx: 6, dy: 0 },
+      cardDx: -40,
+      rocco: { pose: 'peekSide', anchor: 'right', dx: -30, dy: 0 },
       title: 'More details (optional)',
       text: "Got a return trip? Tap here to add it in. It's never required, but it sharpens the math."
     },
     {
       target: '#calculateBtn',
-      rocco: { pose: 'nap', anchor: 'top-right', dx: 8, dy: 6 },
+      rocco: { pose: 'nap', anchor: 'top-right', dx: 8, dy: 34 },
       title: 'Calculate',
       text: "I calculate automatically the moment your required fields are filled — by typing, by voice, or a mix of both across a few mic taps. Tap CALCULATE if you just want to jump straight to the verdict."
     },
     {
       target: '#clearFieldsBtn',
-      rocco: { pose: 'peekTop', anchor: 'top-right', dx: 4, dy: 6 },
+      rocco: { pose: 'peekTop', anchor: 'top-right', dx: 4, dy: 40 },
       title: 'Clear fields',
       text: "Done with this offer? Tap here to wipe the current tab's fields for the next one."
     },
@@ -212,7 +213,7 @@
       target: '#verdictCard',
       onEnter: showDemoResult,
       onExit: hideDemoResult,
-      rocco: { pose: 'dangle', anchor: 'top-right', dx: 6, dy: 4 },
+      rocco: { pose: 'dangle', anchor: 'top-right', dx: 6, dy: 55 },
       title: 'CASH or TRASH',
       text: "This is the verdict. CASH means the offer meets or beats your target pay per hour after gas — TRASH means it falls short. The stats below break down net pay, gross pay, fuel cost, and time."
     },
@@ -220,25 +221,25 @@
       target: '#watchBadge',
       onEnter: showDemoWatch,
       onExit: hideDemoWatch,
-      rocco: { pose: 'hang', anchor: 'top-right', dx: 4, dy: -60 },
+      rocco: { pose: 'hang', anchor: 'top-right', dx: 4, dy: -25 },
       title: "Keep this on your radar",
       text: "When an offer is TRASH but within $3 of your target, I'll flag it like this. Handy on Spark, where offers often bump up a bit at a time — watch for the number I'm pointing at, and grab it the moment it lands."
     },
     {
       target: '#settingsBtn',
-      rocco: { pose: 'peekSide', anchor: 'right', dx: 6, dy: 50 },
+      rocco: { pose: 'peekSide', anchor: 'right', dx: -30, dy: 50 },
       title: 'Your numbers',
       text: "Tap the gear to set your target $/hr, your vehicle's MPG, and gas price. I'll remember them for every calculation, and you can always come back here to change them anytime."
     },
     {
       target: '#themeBtn',
-      rocco: { pose: 'pawup', anchor: 'left', dx: -6, dy: 50 },
+      rocco: { pose: 'pawup', anchor: 'left', dx: -25, dy: 80 },
       title: 'Light or dark',
       text: 'Tap this anytime to switch between light and dark mode.'
     },
     {
       target: null,
-      rocco: { pose: 'nap', anchor: 'top-right', dx: 8, dy: 6 },
+      rocco: { pose: 'nap', anchor: 'top-right', dx: 8, dy: 34 },
       title: "That's the tour!",
       text: "Find me again anytime under Settings — TUTORIAL for the full walkthrough, or HELP & FAQ for quick answers. Let's get your numbers set up."
     }
@@ -305,6 +306,8 @@
       let left = rect.left + rect.width/2 - cardWidth/2;
       left = Math.max(10, Math.min(left, window.innerWidth - cardWidth - 10));
 
+      left += (step.cardDx || 0);
+      left = Math.max(10, Math.min(left, window.innerWidth - cardWidth - 10));
       card.style.top = top + 'px';
       card.style.left = left + 'px';
       positionRocco(step, card.getBoundingClientRect());

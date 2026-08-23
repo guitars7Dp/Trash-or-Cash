@@ -98,12 +98,12 @@
   // free-floating text. `w` is the pose's display width in px — heights
   // follow automatically from each image's own aspect ratio.
   const ROCCO_POSES = {
-    nap:      { src: 'images/rocco-nap.png',       w: 130, alt: 'Rocco napping' },
-    peekTop:  { src: 'images/rocco-peek-top.png',  w: 100, alt: 'Rocco peeking over the top' },
-    dangle:   { src: 'images/rocco-dangle.png',    w: 95,  alt: 'Rocco sitting with a coin' },
-    peekSide: { src: 'images/rocco-peek-side.png', w: 90,  alt: 'Rocco peeking around the side' },
-    hang:     { src: 'images/rocco-hang.png',      w: 85,  alt: 'Rocco hanging' },
-    pawup:    { src: 'images/rocco-pawup.png',     w: 105, alt: 'Rocco waving' },
+    nap:      { src: 'images/NappingRoccoBGRemoved.png',                 w: 190, alt: 'Rocco napping' },
+    peekTop:  { src: 'images/PeekOverTopRoccoBGRemoved.png',             w: 150, alt: 'Rocco peeking over the top' },
+    dangle:   { src: 'images/HoldingSingleCoinRoccoBGRemoved.png',       w: 140, alt: 'Rocco sitting with a coin' },
+    peekSide: { src: 'images/PeekingAroundCross-EyedRoccoBGRemoved.png', w: 135, alt: 'Rocco peeking around the side' },
+    hang:     { src: 'images/HangingRoccoBGRemoved.png',                 w: 125, alt: 'Rocco hanging' },
+    pawup:    { src: 'images/DollarBillWavingRoccoBGRemoved.png',        w: 155, alt: 'Rocco waving' },
   };
 
   // Positions #tutRocco against the just-placed #tutCard. `anchor` picks

@@ -363,6 +363,9 @@
   #tutOverlay{ display:none; }
   #tutOverlay.tut-active{ display:block; }
   #tutCard{
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     position:fixed; z-index:302; max-width:300px; width:88vw;
     padding:0;
     transition:top .28s ease, left .28s ease;

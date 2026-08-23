@@ -142,6 +142,13 @@
     }
     top += (cfg.dy || 0);
     left += (cfg.dx || 0);
+    // Keep Rocco fully on-screen on narrow viewports — the anchor math
+    // above assumes there's room beside/above the card, which isn't
+    // always true on a phone, so clamp back inside the visible area
+    // with a small margin.
+    const margin = 6;
+    left = Math.max(margin, Math.min(left, window.innerWidth - pose.w - margin));
+    top = Math.max(margin, Math.min(top, window.innerHeight - rh - margin));
     roccoEl.style.top = top + 'px';
     roccoEl.style.left = left + 'px';
     roccoEl.classList.add('tut-show');

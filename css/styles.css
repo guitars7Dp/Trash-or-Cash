@@ -355,7 +355,7 @@
      card edge it used to point at. */
   #tutSpotlight{
     position:fixed; z-index:300; pointer-events:none; border-radius:14px;
-    box-shadow:0 0 0 9999px rgba(0,0,0,0.45);
+    box-shadow:0 0 0 9999px rgba(0,0,0,0.65);
     border:2px solid var(--caution);
     transition:opacity .12s ease;
     top:50%; left:50%; width:0; height:0; opacity:0;

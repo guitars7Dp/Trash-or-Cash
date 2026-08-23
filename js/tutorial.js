@@ -168,7 +168,7 @@
     peekTop:    { src: 'images/PeekOverTopRoccoBGRemoved.png',             w: 100, gx: 0.49,  gy: 0.823, anchor: 'shelf-top',   alt: 'Rocco peeking over the top' },
     peekSide:   { src: 'images/PeekingAroundCross-EyedRoccoBGRemoved.png', w: 72,  gx: 0.113, gy: 0.70,  anchor: 'wall-side',   alt: 'Rocco peeking around the side' },
     hang:       { src: 'images/HangingRoccoBGRemoved.png',                 w: 100, gx: 0.49,  gy: 0.055, anchor: 'bar-bottom',  alt: 'Rocco hanging' },
-    pawup:      { src: 'images/DollarBillWavingRoccoBGRemoved.png',        w: 96,  gx: 0.234, gy: 0.90,  anchor: 'shelf-top',   alt: 'Rocco waving' },
+    pawup:      { src: 'images/DollarBillWavingRoccoBGRemoved.png',        w: 96,  cx: 0.385, gy: 0.90,  anchor: 'shelf-top',   alt: 'Rocco waving' },
     seatedCoin: { src: 'images/HoldingSingleCoinRoccoBGRemoved.png',       w: 92,  cx: 0.424, gy: 0.70,  anchor: 'shelf-top',   alt: 'Rocco sitting with a coin' },
   };
 
@@ -452,14 +452,21 @@
 
     const targetEl = step.target ? document.querySelector(step.target) : null;
     if(targetEl){
-      // 'start' (not 'center') — a tall target like the required-fields
-      // block leaves almost no clearance on EITHER side when centered,
-      // which is what was letting the card land on top of it even with
-      // the never-cover-the-target fix in positionForStep(): there was
-      // nowhere valid left to put it. Aligning the target's top near the
-      // top of the screen instead guarantees maximum room below it,
-      // which is the side the card already prefers.
-      targetEl.scrollIntoView({behavior:'auto', block:'start'});
+      // Align the target near the TOP of the screen, not centered — a
+      // tall target like the required-fields block leaves almost no
+      // clearance on EITHER side when centered, which is what was
+      // letting the card land on top of it even with the
+      // never-cover-the-target rule in positionForStep() below: there
+      // was nowhere valid left to put it. Topping it out guarantees
+      // maximum room below, which is the side the card already prefers.
+      // A flat 0px top (scrollIntoView's own block:'start') pushed some
+      // targets up far enough to collide with Safari's own status/URL
+      // bar chrome, so this scrolls to a fixed safe gap instead of
+      // going flush to the very edge.
+      const topMargin = 56;
+      const rect = targetEl.getBoundingClientRect();
+      const delta = rect.top - topMargin;
+      if(Math.abs(delta) > 2) window.scrollBy(0, delta);
     }
     positionForStep();
     spotlight.classList.add('tut-show');

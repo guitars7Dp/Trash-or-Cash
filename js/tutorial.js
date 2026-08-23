@@ -172,6 +172,19 @@
     seatedCoin: { src: 'images/HoldingSingleCoinRoccoBGRemoved.png',       w: 92,  cx: 0.424, gy: 0.70,  anchor: 'shelf-top',   alt: 'Rocco sitting with a coin' },
   };
 
+  // Fetches every pose image right away, as soon as this script runs —
+  // not lazily, the first time each one is actually needed. On a first
+  // visit, nothing has these cached yet: assigning roccoEl.src mid-step
+  // used to kick off the fetch at that exact moment, and since the
+  // browser doesn't know an image's real dimensions until it finishes
+  // downloading, #tutRocco would render at some fallback size and then
+  // visibly resize/settle once it arrived — reads as "the character
+  // moving into place." A replay never showed this because every pose
+  // was already browser-cached from the first run. Kicking every fetch
+  // off immediately (in parallel, well before the tutorial can actually
+  // start) gives them the most possible time to finish first.
+  Object.values(ROCCO_POSES).forEach(pose => { new Image().src = pose.src; });
+
   // Places #tutRocco against #tutBar or #tutShelf per the pose's anchor.
   // Both fixtures are real elements inside the card, so their rects are
   // just measured directly — no target geometry, no viewport-dependent
@@ -336,6 +349,35 @@
   // (see renderStep() below) — shared with positionForStep()'s fit
   // check so both agree on how much vertical room is actually available.
   const TARGET_TOP_MARGIN = 56;
+
+  // window.innerHeight on iOS Safari isn't a stable number — it grows
+  // when the address bar auto-hides on scroll and shrinks back when it
+  // reappears, even though nothing about the actual page changed. Every
+  // "does the target+card group fit, or do we need to pin to the top"
+  // decision reads window.innerHeight, so measuring it fresh on every
+  // single step meant the SAME step (CASH or TRASH, the radar badge)
+  // could get a different answer depending on whatever toolbar state
+  // happened to be showing at that exact moment — which is exactly the
+  // "sometimes it centers, sometimes it doesn't" Derek reported. These
+  // two track a settled reference size instead: trackViewportSize()
+  // (called at the top of positionForStep(), so every code path that
+  // measures the viewport goes through it first) only lets the height
+  // shrink on its own — an actual rotation or window resize is detected
+  // by the WIDTH changing at the same time, and only then does the
+  // reference reset outright. Everywhere below that used to read
+  // window.innerHeight/innerWidth directly now reads these instead.
+  let stableViewportW = window.innerWidth;
+  let stableViewportH = window.innerHeight;
+  function trackViewportSize(){
+    const w = window.innerWidth, h = window.innerHeight;
+    if(Math.abs(w - stableViewportW) > 40){
+      stableViewportW = w;
+      stableViewportH = h;
+    } else {
+      stableViewportW = w;
+      stableViewportH = Math.min(stableViewportH, h);
+    }
+  }
   // The one element currently shrunk to make room for the card (see
   // shrinkTargetToFit() below) — tracked so it can be restored to full
   // size the moment the tutorial moves off it, whether that's the next
@@ -369,7 +411,7 @@
   // Caps the tutorial card at 300px, but shrinks it further on narrow
   // screens so it never gets close to the viewport edges.
   function clampCardWidth(){
-    return Math.min(300, window.innerWidth * 0.88);
+    return Math.min(300, stableViewportW * 0.88);
   }
 
   // Positions the spotlight cutout and the tutorial card for the current
@@ -409,7 +451,7 @@
     targetEl.style.transformOrigin = '';
     const naturalHeight = targetEl.getBoundingClientRect().height;
     const pad = 8, gap = 16, bottomMargin = 10;
-    const available = window.innerHeight - TARGET_TOP_MARGIN - cardHeight - pad*2 - gap - bottomMargin;
+    const available = stableViewportH - TARGET_TOP_MARGIN - cardHeight - pad*2 - gap - bottomMargin;
     if(naturalHeight > available && available > 60){
       const scale = Math.max(0.55, available / naturalHeight);
       targetEl.style.transform = 'scale(' + scale + ')';
@@ -421,6 +463,7 @@
   }
 
   function positionForStep(){
+    trackViewportSize();
     const step = STEPS[stepIndex];
     const targetEl = step.target ? document.querySelector(step.target) : null;
     const pad = 8;
@@ -440,7 +483,7 @@
       const cardWidth = cardWidthForFit;
       const cardHeight = card.offsetHeight || 200;
 
-      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceBelow = stableViewportH - rect.bottom;
       const spaceAbove = rect.top;
       const placeBelow = spaceBelow >= (cardHeight + 26) || spaceBelow >= spaceAbove;
 
@@ -451,7 +494,7 @@
         top = rect.top - pad - 16 - cardHeight;
       }
       // Keep the card fully on-screen when there's room to...
-      top = Math.max(10, Math.min(top, window.innerHeight - cardHeight - 10));
+      top = Math.max(10, Math.min(top, stableViewportH - cardHeight - 10));
       // ...but never let that on-screen adjustment pull it back over the
       // target. For a tall target (the verdict panel with its stats
       // breakdown, a multi-field required-block, etc.) there sometimes
@@ -468,10 +511,10 @@
       }
 
       let left = rect.left + rect.width/2 - cardWidth/2;
-      left = Math.max(10, Math.min(left, window.innerWidth - cardWidth - 10));
+      left = Math.max(10, Math.min(left, stableViewportW - cardWidth - 10));
 
       left += (step.cardDx || 0);
-      left = Math.max(10, Math.min(left, window.innerWidth - cardWidth - 10));
+      left = Math.max(10, Math.min(left, stableViewportW - cardWidth - 10));
       card.style.top = top + 'px';
       card.style.left = left + 'px';
       positionRocco(step);
@@ -492,8 +535,8 @@
       const cardWidth = clampCardWidth();
       card.style.width = cardWidth + 'px';
       const cardHeight = card.offsetHeight || 200;
-      card.style.left = ((window.innerWidth - cardWidth) / 2) + 'px';
-      card.style.top = Math.max(10, (window.innerHeight - cardHeight) / 2) + 'px';
+      card.style.left = ((stableViewportW - cardWidth) / 2) + 'px';
+      card.style.top = Math.max(10, (stableViewportH - cardHeight) / 2) + 'px';
       positionRocco(step);
     }
   }
@@ -508,6 +551,7 @@
   // below — so a single synchronous measure-and-show is reliable, and
   // the character and text box appear together with no visible pause.
   function renderStep(){
+    trackViewportSize();
     const step = STEPS[stepIndex];
     titleEl.textContent = step.title;
     textEl.textContent = step.text;
@@ -518,28 +562,58 @@
 
     const targetEl = step.target ? document.querySelector(step.target) : null;
     if(targetEl){
-      // Align the target near the TOP of the screen, not centered — a
-      // tall target like the required-fields block leaves almost no
-      // clearance on EITHER side when centered, which is what was
-      // letting the card land on top of it even with the
-      // never-cover-the-target rule in positionForStep() below: there
-      // was nowhere valid left to put it. Topping it out guarantees
-      // maximum room below, which is the side the card already prefers.
-      // A flat 0px top (scrollIntoView's own block:'start') pushed some
-      // targets up far enough to collide with Safari's own status/URL
-      // bar chrome, so this scrolls to a fixed safe gap instead of
-      // going flush to the very edge.
       const rect = targetEl.getBoundingClientRect();
-      const delta = rect.top - TARGET_TOP_MARGIN;
-      // behavior:'instant' explicitly, not the default — if the page (or
-      // the OS's own reduced-motion/accessibility settings) has smooth
-      // scrolling on, an unqualified scroll call animates over several
-      // frames, and the 'scroll' listener below re-runs positionForStep()
-      // on every one of those frames — which is what was making Rocco and
-      // the card visibly glide into place each step instead of snapping
-      // straight there. 'instant' overrides that regardless of any CSS
-      // or OS-level scroll-behavior setting.
-      if(Math.abs(delta) > 2) window.scrollBy({top: delta, left: 0, behavior: 'instant'});
+      const cardWidthNow = clampCardWidth();
+      card.style.width = cardWidthNow + 'px';
+      const cardHeightNow = card.offsetHeight || 200;
+      const groupGap = 8 + 16; // matches the pad+gap positionForStep() puts between target and card
+      const groupHeight = rect.height + groupGap + cardHeightNow;
+      const breathingRoom = 20;
+      let desiredTop;
+      if(groupHeight + breathingRoom*2 <= stableViewportH){
+        // Room to spare — center the target+card as one visual group
+        // instead of pinning the target to the top. Pinning to the top
+        // when there's slack left the target sitting right under the
+        // status bar with all the leftover space dumped below the card
+        // (the verdict card on "CASH or TRASH" was the clearest case of
+        // this) — centering the pair splits that slack evenly above and
+        // below instead. Using stableViewportH rather than a fresh
+        // window.innerHeight read here is what makes this consistent
+        // step to step — see the comment by its declaration.
+        desiredTop = (stableViewportH - groupHeight) / 2;
+      } else {
+        // Not enough room for both together (the required-fields block
+        // on "The must-haves" is the one that actually hits this) — a
+        // tall target needs every pixel of headroom below it can get,
+        // so pin it to a small fixed margin from the top instead of
+        // centering, and let shrinkTargetToFit()/positionForStep()'s
+        // never-cover-the-target rule handle the rest.
+        desiredTop = TARGET_TOP_MARGIN;
+      }
+      const delta = rect.top - desiredTop;
+      if(Math.abs(delta) > 2){
+        // Force truly-instant scrolling, not just the default. The
+        // Element.scroll*() `behavior` option only standardizes 'auto'
+        // and 'smooth' — 'auto' means "whatever scroll-behavior CSS
+        // says", so if the page (or the OS's own reduced-motion/
+        // accessibility settings) has smooth scrolling on anywhere, an
+        // unqualified scroll call still animates over several frames,
+        // and the 'scroll' listener below re-runs positionForStep() on
+        // every one of them — which is what was making Rocco and the
+        // card visibly glide into place each step instead of snapping
+        // straight there. Temporarily forcing scroll-behavior:auto via
+        // inline style (higher specificity than any stylesheet rule)
+        // guarantees an instant jump regardless of what CSS elsewhere
+        // requests, then restores whatever was there before.
+        const html = document.documentElement;
+        const prevHtmlBehavior = html.style.scrollBehavior;
+        const prevBodyBehavior = document.body.style.scrollBehavior;
+        html.style.scrollBehavior = 'auto';
+        document.body.style.scrollBehavior = 'auto';
+        window.scrollBy(0, delta);
+        html.style.scrollBehavior = prevHtmlBehavior;
+        document.body.style.scrollBehavior = prevBodyBehavior;
+      }
     }
     positionForStep();
     spotlight.classList.add('tut-show');
@@ -582,13 +656,17 @@
     overlay.classList.add('tut-active');
     document.body.style.overflow = 'hidden';
 
+    // Fresh reference reading for this run — see the declaration above.
+    stableViewportW = window.innerWidth;
+    stableViewportH = window.innerHeight;
+
     // See the scrollSpacer declaration above — guarantees every step's
     // target can be scrolled up near the top of the screen even if it
     // sits close to the bottom of the real page.
     if(!scrollSpacer){
       scrollSpacer = document.createElement('div');
       scrollSpacer.id = 'tutScrollSpacer';
-      scrollSpacer.style.cssText = 'height:' + (window.innerHeight + 100) + 'px; pointer-events:none;';
+      scrollSpacer.style.cssText = 'height:' + (stableViewportH + 100) + 'px; pointer-events:none;';
       document.body.appendChild(scrollSpacer);
     }
 

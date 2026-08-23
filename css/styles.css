@@ -383,18 +383,28 @@
     visibility:hidden; opacity:0;
   }
   #tutCard.tut-show{ visibility:visible; opacity:1; transition:opacity .12s ease; }
-  /* The two fixtures Rocco stands on / hangs from / peeks around —
-     plain little painted ledges, styled to read as physical objects
-     (a soft highlight on top, a shadow underneath) rather than just
-     decorative lines. */
-  #tutBar, #tutShelf{
+  /* The three fixtures Rocco stands on / hangs from / peeks around —
+     plain little painted ledges/posts, styled to read as physical
+     objects (a soft highlight on the lit side, a shadow on the other)
+     rather than just decorative lines. */
+  #tutBar, #tutShelf, #tutWall{
     position:absolute; left:50%; transform:translateX(-50%);
     border-radius:3px;
-    background:linear-gradient(180deg, #d4a24a, var(--caution) 55%, #8a611f);
     box-shadow: 0 3px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.35);
+  }
+  #tutBar, #tutShelf{
+    background:linear-gradient(180deg, #d4a24a, var(--caution) 55%, #8a611f);
   }
   #tutBar{ top:18px; width:64px; height:5px; }
   #tutShelf{ top:110px; width:150px; height:5px; }
+  /* #tutWall is a short vertical post, not a ledge — for the "peeking
+     around the side" pose specifically, so it actually reads as
+     peeking AROUND something. Gradient runs left-to-right (a lit edge,
+     a shadowed edge) to match its vertical orientation. */
+  #tutWall{
+    top:40px; width:6px; height:56px;
+    background:linear-gradient(90deg, #d4a24a, var(--caution) 55%, #8a611f);
+  }
   /* Only the fixture in use for the current pose is shown (toggled in
      positionRocco()) — the idle one fades out instead of sitting there
      unused. */

@@ -1,8 +1,20 @@
-/* Three typefaces used throughout: Archivo Black for big display
-     headlines (verdict word, modal titles), IBM Plex Sans for body copy,
-     IBM Plex Mono for numbers/labels (the app leans on monospace for
-     anything numeric so digits stay aligned). */
-  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap');
+/* Four typefaces used throughout, per the "Industrial Stamp" type system:
+     Anton for the one true display headline (the CASH/TRASH verdict word
+     — a condensed, stamped-metal weight, used nowhere else), Oswald for
+     everything that used to be Archivo Black (buttons, modal titles,
+     tutorial nav), IBM Plex Sans for body copy (unchanged), and Space
+     Mono for numbers/labels (the app leans on monospace for anything
+     numeric so digits stay aligned).
+
+     Space Mono only ships in weights 400 and 700 (IBM Plex Mono had
+     500/600/700). Every mono element below is pinned to one of those two
+     explicitly, and small print/numeric elements are pinned to 700
+     specifically: IBM Plex Mono was loaded starting at weight 500, so
+     even mono text with no explicit font-weight rendered medium-weight
+     by default — Space Mono's real default (400) is visibly lighter,
+     which is what washed out the fine print/numbers. Pinning those to
+     700 restores the same effective darkness. */
+  @import url('https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
   /* ---------- Design tokens (dark theme = default) ----------
      Every color in the app is a var(--x) reference to one of these. This
      block is the source of truth for CSS; the THEMES object in the main
@@ -100,7 +112,7 @@
   .mic-btn{
     display:flex; align-items:center; justify-content:center; gap:9px;
     width:100%; padding:14px; border-radius:12px; border:1.5px solid var(--line);
-    background:var(--panel); color:var(--text); font-family:'Archivo Black',sans-serif;
+    background:var(--panel); color:var(--text); font-family:'Oswald',sans-serif; font-weight:600;
     font-size:13px; letter-spacing:0.03em; cursor:pointer; margin-bottom:14px;
     -webkit-tap-highlight-color:transparent;
     box-shadow:
@@ -125,7 +137,7 @@
   .calc-btn{
     flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
     padding:15px; border-radius:12px; border:none; background:var(--caution);
-    color:var(--bg); font-family:'Archivo Black',sans-serif; font-size:14px; letter-spacing:0.03em;
+    color:var(--bg); font-family:'Oswald',sans-serif; font-weight:600; font-size:14px; letter-spacing:0.03em;
     cursor:pointer; -webkit-tap-highlight-color:transparent;
     /* Heavier version of the raised-button recipe — this is the app's
        primary action, so it gets the strongest lift/depth of any button
@@ -148,7 +160,7 @@
   .clear-btn{
     display:flex; align-items:center; gap:6px; padding:10px 14px; border-radius:10px;
     border:1.5px solid var(--line); background:var(--panel); color:var(--text);
-    font-family:'IBM Plex Mono',monospace; font-size:12.5px; letter-spacing:0.05em;
+    font-family:'Space Mono',monospace; font-weight:700; font-size:12.5px; letter-spacing:0.05em;
     -webkit-tap-highlight-color:transparent; cursor:pointer;
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.08),
@@ -172,7 +184,7 @@
        the top of their now-taller box instead of centered in it. */
     min-height:44px; padding:12px 6px; border-radius:10px;
     border:1.5px solid var(--line); background:var(--panel);
-    font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:12.5px;
+    font-family:'Space Mono',monospace; font-weight:700; font-size:12.5px;
     letter-spacing:0.03em; color:var(--muted); cursor:pointer;
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.08),
@@ -194,18 +206,18 @@
   /* ---------- Field blocks ---------- */
   .field-group{ margin-bottom:14px; }
   .field-label{
-    font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:0.08em;
+    font-family:'Space Mono',monospace; font-weight:700; font-size:11.5px; letter-spacing:0.08em;
     text-transform:uppercase; color:var(--muted); margin-bottom:6px; display:flex;
     justify-content:space-between; align-items:baseline;
   }
   .field-label .req{ color:var(--caution); }
   .field-input{
     width:100%; padding:16px 14px; border-radius:12px; border:1.5px solid var(--line-bright);
-    background:var(--panel); color:var(--text); font-family:'IBM Plex Mono',monospace;
-    font-size:22px; font-weight:600; outline:none;
+    background:var(--panel); color:var(--text); font-family:'Space Mono',monospace;
+    font-size:22px; font-weight:700; outline:none;
   }
   .field-input:focus{ border-color:var(--caution); }
-  .field-input::placeholder{ color:var(--muted); font-weight:500; opacity:0.75; }
+  .field-input::placeholder{ color:var(--muted); font-weight:400; opacity:0.75; }
   .field-hint{ font-size:12px; color:var(--muted); margin-top:5px; }
   .required-block{
     background:var(--panel); border:1px solid var(--line); border-radius:16px;
@@ -215,7 +227,7 @@
   .more-toggle{
     width:100%; display:flex; align-items:center; justify-content:space-between;
     background:transparent; border:1px dashed var(--line-bright); border-radius:12px;
-    padding:12px 14px; color:var(--muted); font-family:'IBM Plex Mono',monospace;
+    padding:12px 14px; color:var(--muted); font-family:'Space Mono',monospace; font-weight:700;
     font-size:12px; letter-spacing:0.05em; cursor:pointer; margin-bottom:10px;
   }
   .more-toggle .chev{ transition:transform .2s ease; }
@@ -238,7 +250,7 @@
   html:not([data-theme="light"]) .waiting-img-light{ display:none; }
   html:not([data-theme="light"]) .waiting-img-dark{ display:inline-block; }
   .waiting-note .waiting-txt{
-    font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--muted);
+    font-family:'Space Mono',monospace; font-weight:700; font-size:12.5px; color:var(--muted);
   }
   /* ---------- Result ---------- */
   .result{ display:none; }
@@ -257,7 +269,7 @@
   }
   .verdict-card.cash{ background:var(--cash-dim); border-color:var(--cash); }
   .verdict-card.trash{ background:var(--trash-dim); border-color:var(--trash); }
-  .verdict-word{ font-family:'Archivo Black',sans-serif; font-size:44px; line-height:1; letter-spacing:-0.01em; }
+  .verdict-word{ font-family:'Anton',sans-serif; font-size:46px; line-height:1; letter-spacing:0.01em; }
   .verdict-card.cash .verdict-word{ color:var(--cash); }
   .verdict-card.trash .verdict-word{ color:var(--trash); }
   .verdict-card.pulse{ animation:cardPulse 0.4s ease; }
@@ -266,7 +278,7 @@
     45%{ transform:scale(1.035); }
     100%{ transform:scale(1); }
   }
-  .verdict-sub{ font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text); opacity:0.85; margin-top:6px; }
+  .verdict-sub{ font-family:'Space Mono',monospace; font-weight:700; font-size:13px; color:var(--text); opacity:0.85; margin-top:6px; }
   /* Tilt bar signature element */
   /* width:100% is the actual fix for the "TRASHTARGETCASH" bug: .verdict-card
      became a flex column (see below), and a flex item with auto left/right
@@ -290,15 +302,15 @@
     position:absolute; top:50%; width:2px; height:20px; background:var(--muted);
     left:50%; transform:translate(-50%,-50%);
   }
-  .tilt-labels{ display:flex; justify-content:space-between; font-family:'IBM Plex Mono',monospace;
+  .tilt-labels{ display:flex; justify-content:space-between; font-family:'Space Mono',monospace; font-weight:700;
     font-size:10px; color:var(--muted); margin-top:6px; letter-spacing:0.05em; }
   .stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px; }
   .stat-box{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
-  .stat-box .stat-label{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-transform:uppercase;
+  .stat-box .stat-label{ font-family:'Space Mono',monospace; font-weight:700; font-size:10.5px; text-transform:uppercase;
     letter-spacing:0.06em; color:var(--muted); margin-bottom:4px; }
-  .stat-box .stat-value{ font-family:'IBM Plex Mono',monospace; font-size:19px; font-weight:600; }
+  .stat-box .stat-value{ font-family:'Space Mono',monospace; font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; }
   .breakeven-note{
-    font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--muted);
+    font-family:'Space Mono',monospace; font-weight:700; font-size:12.5px; color:var(--muted);
     text-align:center; padding:10px 6px 0;
   }
   /* ---------- Watchlist badge ---------- */
@@ -317,11 +329,11 @@
   html:not([data-theme="light"]) .radar-icon-light{ display:none; }
   html:not([data-theme="light"]) .radar-icon-dark{ display:block; }
   .watch-badge .msg{
-    font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:13px;
+    font-family:'Space Mono',monospace; font-weight:700; font-size:13px;
     color:var(--caution); line-height:1.25; text-align:center; flex:1;
   }
   .watch-badge .msg span{
-    display:block; font-weight:500; font-size:11px; color:var(--muted);
+    display:block; font-weight:700; font-size:11px; color:var(--muted);
     margin-top:2px; text-align:center;
   }
   /* ---------- Settings modal ---------- */
@@ -341,7 +353,7 @@
     background:var(--panel); border-top:1.5px solid var(--line-bright); border-radius:20px 20px 0 0;
     width:100%; max-width:460px; padding:22px 18px 28px; max-height:88vh; overflow-y:auto;
   }
-  .modal h2{ font-family:'Archivo Black',sans-serif; font-size:19px; margin:0 0 4px; }
+  .modal h2{ font-family:'Oswald',sans-serif; font-weight:600; font-size:19px; margin:0 0 4px; }
   .modal .modal-sub{
     display:flex; align-items:center; gap:10px;
     font-size:13px; color:var(--muted); margin-bottom:18px;
@@ -351,10 +363,10 @@
   .modal .field-group{ margin-bottom:16px; }
   .slider-row{ display:flex; align-items:center; gap:12px; }
   .slider-row input[type=range]{ flex:1; accent-color:var(--caution); }
-  .slider-value{ font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:16px; min-width:52px; text-align:right; }
+  .slider-value{ font-family:'Space Mono',monospace; font-weight:700; font-size:16px; min-width:52px; text-align:right; }
   .modal-save{
     width:100%; padding:16px; border-radius:12px; border:none; background:var(--caution);
-    color:var(--bg); font-family:'Archivo Black',sans-serif; font-size:15px; cursor:pointer; margin-top:6px;
+    color:var(--bg); font-family:'Oswald',sans-serif; font-weight:600; font-size:15px; cursor:pointer; margin-top:6px;
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.3),
       inset 0 -3px 5px rgba(0,0,0,0.12),
@@ -368,7 +380,7 @@
       inset 0 1px 0 rgba(255,255,255,0.2),
       inset 0 2px 4px rgba(0,0,0,0.25);
   }
-  .derived-rate{ font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--caution); margin-top:6px; }
+  .derived-rate{ font-family:'Space Mono',monospace; font-weight:700; font-size:12px; color:var(--caution); margin-top:6px; }
   /* ---------- Order tracking ---------- */
   .tracklog-prompt{
     margin-top:14px; padding:14px 16px; border-radius:14px; background:var(--panel);
@@ -379,7 +391,7 @@
   .tracklog-btns{ display:flex; gap:8px; flex-shrink:0; }
   .tracklog-btn{
     padding:9px 16px; border-radius:10px; border:1.5px solid var(--line-bright); background:transparent;
-    color:var(--text); font-family:'Archivo Black',sans-serif; font-size:12px; cursor:pointer;
+    color:var(--text); font-family:'Oswald',sans-serif; font-weight:600; font-size:12px; cursor:pointer;
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.06),
       0 2px 0 var(--line-bright),
@@ -395,7 +407,7 @@
   .tracklog-confirm.hidden{ display:none; }
   .log-table{ width:100%; border-collapse:collapse; font-size:12px; margin-top:6px; }
   .log-table th{ text-align:left; padding:6px 6px; border-bottom:1.5px solid var(--line-bright); color:var(--muted); font-size:11px; }
-  .log-table td{ padding:7px 6px; border-bottom:1px solid var(--line); font-family:'IBM Plex Mono',monospace; }
+  .log-table td{ padding:7px 6px; border-bottom:1px solid var(--line); font-family:'Space Mono',monospace; font-weight:700; }
   .log-table .lv-cash{ color:var(--cash); font-weight:700; }
   .log-table .lv-trash{ color:var(--trash); font-weight:700; }
   .log-empty{ font-size:13px; color:var(--muted); padding:20px 0; text-align:center; }
@@ -406,8 +418,8 @@
   .modal-secondary-btn{
     flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
     padding:12px 8px; border-radius:12px; border:1.5px solid var(--line-bright);
-    background:var(--panel); color:var(--text); font-family:'IBM Plex Mono',monospace;
-    font-weight:600; font-size:11.5px; letter-spacing:0.03em; cursor:pointer;
+    background:var(--panel); color:var(--text); font-family:'Space Mono',monospace;
+    font-weight:700; font-size:11.5px; letter-spacing:0.03em; cursor:pointer;
     box-shadow:
       inset 0 1px 0 rgba(255,255,255,0.08),
       0 2px 0 var(--line-bright),
@@ -538,7 +550,7 @@
   #tutRocco.tut-show{ visibility:visible; opacity:1; }
   .tut-rule{ width:38px; height:3px; background:var(--caution); border-radius:2px; margin:0 auto 10px; }
   .tut-progress{
-    font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em;
+    font-family:'Space Mono',monospace; font-weight:700; font-size:10.5px; letter-spacing:0.06em;
     /* Fixed color, not var(--muted) — the tutorial card's background is
        always solid black regardless of the app's light/dark theme, but
        --muted is a theme-dependent value tuned for the app's OWN light
@@ -549,7 +561,7 @@
     color:#b8b8ae; text-transform:uppercase; text-shadow:0 2px 6px rgba(0,0,0,0.7);
   }
   .tut-title{
-    font-family:'Archivo Black',sans-serif; font-size:16px; margin:6px 0 6px;
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:16px; margin:6px 0 6px;
     color: var(--caution);
     text-shadow:0 2px 10px rgba(0,0,0,0.7);
   }
@@ -571,7 +583,7 @@
   }
   .tut-nav{ display:flex; gap:8px; }
   .tut-back, .tut-next{
-    font-family:'Archivo Black',sans-serif; font-size:12.5px; letter-spacing:0.02em;
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:12.5px; letter-spacing:0.02em;
     border-radius:10px; padding:10px 16px; cursor:pointer;
     transition: transform .08s ease, box-shadow .08s ease;
   }

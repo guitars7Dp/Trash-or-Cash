@@ -749,14 +749,44 @@
       // fight the user (and our own programmatic scroll below would
       // re-trigger itself); size changes are the only thing that should
       // reopen the centering decision.
-      window.addEventListener('resize', ()=>{ if(active) renderStep(); });
-      window.addEventListener('scroll', ()=>{ if(active) positionForStep(); }, {passive:true});
+      // iOS Safari's toolbar transition doesn't fire just one resize/scroll
+      // event — it fires a burst of them, one per animation frame, while
+      // it's mid-animation. Each of those used to trigger its own
+      // synchronous renderStep()/positionForStep() call (and renderStep()
+      // can itself trigger a corrective window.scrollBy()), so a single
+      // toolbar transition could fire several full repositions in a row,
+      // each snapping Rocco (and the card, and the spotlight) to a
+      // slightly different spot with no animation to smooth it — which is
+      // exactly what read as Rocco "moving" on his own. Coalescing every
+      // handler through rAF collapses however many events land in one
+      // frame down to a single reposition for that frame, so a mid-
+      // transition burst still tracks the toolbar (once per frame, not
+      // once per event) instead of visibly stuttering between calls.
+      // renderStep() already calls positionForStep() itself as its last
+      // step, so if both a "full render" and a "just reposition" request
+      // land in the same frame, running renderStep() alone covers both —
+      // wantRender always wins instead of whichever event happened to
+      // fire first silently dropping the other.
+      let rafScheduled = false, wantRender = false;
+      function scheduleFrame(full){
+        if(full) wantRender = true;
+        if(rafScheduled) return;
+        rafScheduled = true;
+        requestAnimationFrame(()=>{
+          rafScheduled = false;
+          const full = wantRender;
+          wantRender = false;
+          if(active) (full ? renderStep : positionForStep)();
+        });
+      }
+      window.addEventListener('resize', ()=>{ scheduleFrame(true); });
+      window.addEventListener('scroll', ()=>{ scheduleFrame(false); }, {passive:true});
       // Safari's address-bar show/hide changes window.visualViewport
       // without always firing window's own 'resize' event — listening
       // here too catches that toolbar transition directly instead of
       // waiting on a different event that might not fire.
       if(window.visualViewport){
-        window.visualViewport.addEventListener('resize', ()=>{ if(active) renderStep(); });
+        window.visualViewport.addEventListener('resize', ()=>{ scheduleFrame(true); });
       }
     }
 

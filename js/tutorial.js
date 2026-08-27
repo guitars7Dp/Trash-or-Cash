@@ -306,6 +306,18 @@
     },
     {
       target: '#calculateBtn',
+      // CALCULATE isn't centered in its own row — it shares .action-row
+      // with the small square delete/trash button (.clear-row) sitting to
+      // its right, so the button's own visual center sits left of the
+      // row's (and the viewport's) center by roughly half of that trash
+      // button's width plus the gap between them (~27px, from the actual
+      // CSS: 10px gap + a ~44px-wide icon-only .clear-btn). Without this,
+      // the card centers on the viewport as usual, which no longer lines
+      // up under the button now that the button itself is off-center —
+      // this nudges the card left to match. Estimated from the CSS, not
+      // measured on a real device, so nudge this number if it's still a
+      // few pixels off once you see it live.
+      cardDx: -28,
       rocco: { pose: 'pawup' },
       title: 'Calculate',
       text: "I calculate automatically the moment your required fields are filled — by typing, by voice, or a mix of both across a few mic taps. Tap CALCULATE if you just want to jump straight to the verdict."
@@ -601,28 +613,21 @@
       const cardHeightNow = card.offsetHeight || 200;
       const groupGap = 8 + 16; // matches the pad+gap positionForStep() puts between target and card
       const groupHeight = rect.height + groupGap + cardHeightNow;
-      const breathingRoom = 20;
-      let desiredTop;
-      if(groupHeight + breathingRoom*2 <= stableViewportH){
-        // Room to spare — center the target+card as one visual group
-        // instead of pinning the target to the top. Pinning to the top
-        // when there's slack left the target sitting right under the
-        // status bar with all the leftover space dumped below the card
-        // (the verdict card on "CASH or TRASH" was the clearest case of
-        // this) — centering the pair splits that slack evenly above and
-        // below instead. Using stableViewportH rather than a fresh
-        // window.innerHeight read here is what makes this consistent
-        // step to step — see the comment by its declaration.
-        desiredTop = (stableViewportH - groupHeight) / 2;
-      } else {
-        // Not enough room for both together (the required-fields block
-        // on "The must-haves" is the one that actually hits this) — a
-        // tall target needs every pixel of headroom below it can get,
-        // so pin it to a small fixed margin from the top instead of
-        // centering, and let shrinkTargetToFit()/positionForStep()'s
-        // never-cover-the-target rule handle the rest.
-        desiredTop = TARGET_TOP_MARGIN;
-      }
+      // Center the target+card as one visual group whenever there's any
+      // slack to split, instead of a hard either/or between "fully center"
+      // and "pin to a fixed top margin." The old version only centered
+      // when a full 40px breathing-room buffer fit on top of the group,
+      // and otherwise dumped 100% of the leftover space on whichever side
+      // the group happened to land — the verdict card on "CASH or TRASH"
+      // and the "More details" panel were the two clearest cases of a big
+      // one-sided gap instead of an even split. This formula centers
+      // using whatever room actually exists, and only falls back to
+      // TARGET_TOP_MARGIN once there's truly no slack left (the
+      // required-fields block on "The must-haves" is the one that
+      // actually hits that floor). Using stableViewportH rather than a
+      // fresh window.innerHeight read here is what makes this consistent
+      // step to step — see the comment by its declaration.
+      const desiredTop = Math.max(TARGET_TOP_MARGIN, (stableViewportH - groupHeight) / 2);
       const delta = rect.top - desiredTop;
       if(Math.abs(delta) > 2){
         // Force truly-instant scrolling, not just the default. The
@@ -708,14 +713,29 @@
 
     if(!resizeHandlerBound){
       resizeHandlerBound = true;
-      window.addEventListener('resize', ()=>{ if(active) positionForStep(); });
+      // A true size change (toolbar showing/hiding, orientation change)
+      // re-runs the FULL renderStep(), not just positionForStep() — the
+      // group-centering math in renderStep() only runs once per step, on
+      // entry, using whatever viewport height was measured at that exact
+      // moment. If Safari's toolbar was still mid-transition then (a very
+      // common timing on a first-run flash->tutorial handoff), that
+      // reading understates the real available height and the step's
+      // centering is permanently stale from then on, even though the
+      // viewport genuinely grew a moment later. Re-centering on resize
+      // fixes that instead of only ever repositioning relative to the
+      // already-possibly-wrong scroll position. Plain scroll events stay
+      // on positionForStep() only — re-centering on every scroll would
+      // fight the user (and our own programmatic scroll below would
+      // re-trigger itself); size changes are the only thing that should
+      // reopen the centering decision.
+      window.addEventListener('resize', ()=>{ if(active) renderStep(); });
       window.addEventListener('scroll', ()=>{ if(active) positionForStep(); }, {passive:true});
       // Safari's address-bar show/hide changes window.visualViewport
       // without always firing window's own 'resize' event — listening
       // here too catches that toolbar transition directly instead of
       // waiting on a different event that might not fire.
       if(window.visualViewport){
-        window.visualViewport.addEventListener('resize', ()=>{ if(active) positionForStep(); });
+        window.visualViewport.addEventListener('resize', ()=>{ if(active) renderStep(); });
       }
     }
 

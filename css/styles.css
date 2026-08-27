@@ -419,6 +419,25 @@
   .tracklog-btn.yes{ border-color:var(--cash); color:var(--cash); }
   .tracklog-confirm{ font-size:13px; color:var(--muted); }
   .tracklog-confirm.hidden{ display:none; }
+  /* Period filter for the order log ("Since last clear" / Today / This
+     Week / This Month / All Time). Kept as a plain, lightly-bordered
+     native <select> rather than the button material system — custom
+     backgrounds on a native select's own dropdown chrome render
+     inconsistently across browsers, iOS Safari especially, so this
+     stays simple and legible instead. */
+  .log-filter-row{
+    display:flex; align-items:center; gap:8px; margin-top:12px;
+  }
+  .log-filter-label{
+    font-family:'Space Mono',monospace; font-weight:700; font-size:11px;
+    letter-spacing:0.05em; text-transform:uppercase; color:var(--muted); flex:0 0 auto;
+  }
+  .log-filter-select{
+    flex:1; padding:9px 10px; border-radius:10px; border:1.5px solid var(--line);
+    background:var(--panel); color:var(--text); font-family:'Space Mono',monospace;
+    font-weight:700; font-size:12.5px; cursor:pointer;
+  }
+  .log-filter-select:focus{ border-color:var(--caution); outline:none; }
   .log-table{ width:100%; border-collapse:collapse; font-size:12px; margin-top:6px; }
   .log-table th{ text-align:left; padding:6px 6px; border-bottom:1.5px solid var(--line-bright); color:var(--muted); font-size:11px; }
   .log-table td{ padding:7px 6px; border-bottom:1px solid var(--line); font-family:'Space Mono',monospace; font-weight:700; }

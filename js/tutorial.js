@@ -611,31 +611,6 @@
     const targetEl = step.target ? document.querySelector(step.target) : null;
     if(targetEl){
       const rect = targetEl.getBoundingClientRect();
-      // TEMPORARY DEBUG — remove once step 8's card-height mystery is
-      // solved. Appends real on-device numbers to the small STEP X OF 12
-      // line so they show up directly in a screenshot: the target's own
-      // box, any transform currently applied to it (shrinkTargetToFit
-      // leaves a scale() on tall targets — if this is non-empty on
-      // #verdictCard, that's the smoking gun), and for #verdictCard
-      // specifically, its own height vs. the actual height its children
-      // add up to, which is exactly the number that should explain the
-      // extra space at the bottom of the CASH card if there is any.
-      try{
-        const cs = getComputedStyle(targetEl);
-        let dbg = ' | tgt ' + Math.round(rect.width) + 'x' + Math.round(rect.height)
-          + ' xf:[' + (cs.transform && cs.transform !== 'none' ? cs.transform : 'none') + ']';
-        if(targetEl.id === 'verdictCard'){
-          let kidsH = 0;
-          Array.from(targetEl.children).forEach(k => {
-            const kr = k.getBoundingClientRect();
-            const kcs = getComputedStyle(k);
-            kidsH += kr.height + parseFloat(kcs.marginTop||0) + parseFloat(kcs.marginBottom||0);
-          });
-          dbg += ' | vcH:' + Math.round(rect.height) + ' kidsH:' + Math.round(kidsH)
-            + ' disp:' + cs.display + ' minH:' + cs.minHeight;
-        }
-        progressEl.textContent += dbg;
-      }catch(e){ progressEl.textContent += ' | dbg-err'; }
       const cardWidthNow = clampCardWidth();
       card.style.width = cardWidthNow + 'px';
       const cardHeightNow = card.offsetHeight || 200;
@@ -684,6 +659,24 @@
     positionForStep();
     spotlight.classList.add('tut-show');
     card.classList.add('tut-show');
+
+    // iOS Safari's dynamic toolbar (the address bar that shrinks/grows as
+    // you scroll) can still be mid-animation right when the scroll above
+    // finishes, so the rect positionForStep() just measured can be a few
+    // pixels off from where the target actually settles a moment later.
+    // The spotlight is position:fixed, so it doesn't drift back into sync
+    // on its own the way the target (a normal in-flow element) does —
+    // instead it stays exactly where it was told to go, which is what
+    // read as the highlighted card sitting "too high" with extra empty
+    // space below it, inside a spotlight cutout that no longer matched
+    // the target's real position. One more measure-and-reposition pass
+    // shortly after catches that settle. It's a no-op (nothing visibly
+    // moves) if the viewport was already settled, and guarded by step
+    // index so it can't fire after the user has already moved on.
+    const stepAtSchedule = stepIndex;
+    setTimeout(()=>{
+      if(active && stepIndex === stepAtSchedule) positionForStep();
+    }, 150);
   }
 
   // Moves to a new step: runs the outgoing step's onExit (if any), runs

@@ -1,16 +1,34 @@
-  // ---------- Calculation ----------
+// ---------- Calculation ----------
   // Reads one field as a number, or null if it's blank/not a number —
   // used everywhere below to tell "not filled in yet" apart from 0.
-  function num(id){ const v = parseFloat(document.getElementById(id).value); return isNaN(v) ? null : v; }
+  // Nothing in this app is ever meant to be negative (miles, pay, items,
+  // minutes), so a negative value is treated exactly like a blank field
+  // rather than passed through — every required-field guard below
+  // (`===null`) and every optional-field fallback (`|| 0`) already knows
+  // how to handle "not filled in," so routing negatives through the same
+  // null here means the app falls back to its normal waiting/blank state
+  // instead of quietly computing a confidently-wrong verdict from a
+  // stray minus sign, with no new UI or error state needed anywhere.
+  function num(id){
+    const v = parseFloat(document.getElementById(id).value);
+    return (isNaN(v) || v < 0) ? null : v;
+  }
 
   // Combines a separate hours field + minutes field into total minutes.
   // Returns null only if BOTH are blank (no time entered at all); a blank
   // hours field with a minutes value is treated as 0 hours, not "unknown".
+  // Same negative-is-invalid rule as num() above, applied per-field
+  // (rather than nulling the whole result) so a negative minutes value
+  // can't silently subtract time from a valid hours value or vice versa;
+  // every calc function's existing `time<=0` check already catches the
+  // case where clamping both down to 0 leaves nothing usable.
   function numTime(hrId, minId){
     const hrEl = document.getElementById(hrId), minEl = document.getElementById(minId);
     const hrRaw = hrEl ? hrEl.value : '', minRaw = minEl ? minEl.value : '';
     if(hrRaw === '' && minRaw === '') return null;
-    const hr = parseFloat(hrRaw) || 0, min = parseFloat(minRaw) || 0;
+    const hrParsed = parseFloat(hrRaw), minParsed = parseFloat(minRaw);
+    const hr = (isNaN(hrParsed) || hrParsed < 0) ? 0 : hrParsed;
+    const min = (isNaN(minParsed) || minParsed < 0) ? 0 : minParsed;
     return hr*60 + min;
   }
 
@@ -41,10 +59,18 @@
   function calcInstacart(){
     const items = num('ic-items'), offer = num('ic-offer'), miles = num('ic-miles');
     if(items===null || offer===null || miles===null) return null;
-    const speed = num('ic-speed') || CONSTANTS.icSpeed;
+    // `|| CONSTANTS.icSpeed` used to also swallow an explicitly-typed 0,
+    // not just a blank field — num() correctly returns 0 (not null) for
+    // "0", but 0 is falsy, so `||` silently replaced it with the 150-sec
+    // default anyway. A 0 here is nonsensical either way (instant
+    // shopping / driving speed), so it's treated the same as blank —
+    // explicit now via icSpeedInput<=0 rather than accidental via `||`.
+    const icSpeedInput = num('ic-speed');
+    const speed = (icSpeedInput === null || icSpeedInput <= 0) ? CONSTANTS.icSpeed : icSpeedInput;
     const shopTime = (items * speed) / 60;
-    const mph = num('ic-mph') || CONSTANTS.icMph;
-    const driveTime = mph>0 ? (miles / mph) * 60 : 0;
+    const icMphInput = num('ic-mph');
+    const mph = (icMphInput === null || icMphInput <= 0) ? CONSTANTS.icMph : icMphInput;
+    const driveTime = (miles / mph) * 60;
     const time = shopTime + driveTime;
     if(time<=0) return null;
     const fuel = miles * costPerMile();
@@ -180,4 +206,3 @@
   function calculateNow(){
     runCheck();
   }
-

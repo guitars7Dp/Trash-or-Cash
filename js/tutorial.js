@@ -82,11 +82,33 @@
   // offsetHeight forces the browser to apply the class change immediately
   // (a synchronous layout), so by the time this returns the element's
   // real, final rect is available right away — no animation, no wait.
+  //
+  // This handled CSS *transitions* but missed something that turned out
+  // to matter a lot: #result has a real CSS *animation* on its .show
+  // class (`animation:rise .25s ease`, a small translateY(8px)->0 slide),
+  // which is a completely separate mechanism from transitions —
+  // transition:none never touched it. So every tutorial-forced reveal of
+  // #result (which is what puts the verdict card and the watch badge on
+  // screen for steps 8 and 9) was quietly still playing that 8px slide.
+  // rect = targetEl.getBoundingClientRect() in positionForStep() runs
+  // synchronously right after this, well before that .25s animation
+  // finishes — so it was measuring the card ~8px lower than where it
+  // actually settles a moment later, and the spotlight got sized from
+  // that stale measurement. That's the real reason steps 8/9 specifically
+  // (the only two steps that force a reveal) kept showing a gap under the
+  // card no matter what timing/viewport fix was tried — this was never a
+  // timing race, it was measuring the wrong position from the start.
+  // getAnimations().finish() jumps any animation this reveal just started
+  // straight to its end (100%) keyframe, synchronously, so the very next
+  // measurement is the real, final layout instead of a mid-slide one.
   function revealInstantly(el, addClass){
     const prevTransition = el.style.transition;
     el.style.transition = 'none';
     if(addClass) el.classList.add(addClass);
     void el.offsetHeight;
+    if(el.getAnimations){
+      el.getAnimations().forEach(a => a.finish());
+    }
     el.style.transition = prevTransition;
   }
   let demoResultForced = false;

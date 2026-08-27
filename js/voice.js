@@ -1,4 +1,4 @@
-  // ---------- Voice entry ----------
+// ---------- Voice entry ----------
   // Word-to-number lookup tables for wordsToDigits() below.
   const ONES_WORDS = { zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9,
     ten:10, eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16, seventeen:17, eighteen:18, nineteen:19 };
@@ -307,7 +307,24 @@
     }
 
     micBtn.addEventListener('click', async ()=>{
-      if(listening) return;
+      // Tap-to-stop: a second tap while a session is active (or still
+      // spinning up) cancels it instead of being ignored. Whatever stage
+      // it's at, resetMicButton() below flips the UI back immediately;
+      // the two "user backed out" checks further down (searching this
+      // file for "backed out") independently stop the in-flight tap-1
+      // async chain from ever calling recognition.start(). If a live
+      // recognition session already exists, .stop() (not .abort()) asks
+      // it to end the same clean way the silence timer already does —
+      // letting a final result flush instead of discarding whatever was
+      // just said — and its own onend handler clears its own timers.
+      if(listening){
+        const rec = activeRecognition;
+        resetMicButton();
+        if(rec){
+          try{ rec.stop(); }catch(e){}
+        }
+        return;
+      }
       listening = true;
       micBtn.classList.add('listening');
       micBtn.querySelector('.mic-label').textContent = 'STARTING…';
@@ -433,7 +450,12 @@
         clearTimeout(deadMicTimer);
         clearTimeout(hardCeiling);
         clearTimeout(silenceTimer);
-        resetMicButton();
+        // Only reset shared button/state if this recognition is still the
+        // current one. Without this guard, a stale session's onend (firing
+        // asynchronously after a tap-to-stop .stop() call above) could fire
+        // AFTER a fast re-tap has already started a brand-new session, and
+        // would wipe out that new session's state out from under it.
+        if(activeRecognition === recognition) resetMicButton();
       };
       // Small settle delay after the handshake, before actually starting
       // recognition. On iOS the mic hardware can need a brief beat to
@@ -512,4 +534,3 @@
 
   document.getElementById('clearFieldsBtn').addEventListener('click', clearActiveTabFields);
   document.getElementById('calculateBtn').addEventListener('click', calculateNow);
-

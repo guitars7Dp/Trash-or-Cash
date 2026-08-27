@@ -299,7 +299,10 @@
       target: '.more-toggle[data-more="spark"]',
       onEnter: openMorePanel,
       onExit: closeMorePanel,
-      cardDx: -40,
+      // No cardDx here on purpose: .more-toggle is width:100% (see the
+      // CSS), so it's already centered same as the viewport — a leftover
+      // -40 offset from an earlier layout was shifting the card off of an
+      // already-centered button instead of aligning to anything real.
       rocco: { pose: 'nap' },
       title: 'More details (optional)',
       text: "Got a return trip? Tap here to add it in. It's never required, but it sharpens the math."
@@ -608,6 +611,31 @@
     const targetEl = step.target ? document.querySelector(step.target) : null;
     if(targetEl){
       const rect = targetEl.getBoundingClientRect();
+      // TEMPORARY DEBUG — remove once step 8's card-height mystery is
+      // solved. Appends real on-device numbers to the small STEP X OF 12
+      // line so they show up directly in a screenshot: the target's own
+      // box, any transform currently applied to it (shrinkTargetToFit
+      // leaves a scale() on tall targets — if this is non-empty on
+      // #verdictCard, that's the smoking gun), and for #verdictCard
+      // specifically, its own height vs. the actual height its children
+      // add up to, which is exactly the number that should explain the
+      // extra space at the bottom of the CASH card if there is any.
+      try{
+        const cs = getComputedStyle(targetEl);
+        let dbg = ' | tgt ' + Math.round(rect.width) + 'x' + Math.round(rect.height)
+          + ' xf:[' + (cs.transform && cs.transform !== 'none' ? cs.transform : 'none') + ']';
+        if(targetEl.id === 'verdictCard'){
+          let kidsH = 0;
+          Array.from(targetEl.children).forEach(k => {
+            const kr = k.getBoundingClientRect();
+            const kcs = getComputedStyle(k);
+            kidsH += kr.height + parseFloat(kcs.marginTop||0) + parseFloat(kcs.marginBottom||0);
+          });
+          dbg += ' | vcH:' + Math.round(rect.height) + ' kidsH:' + Math.round(kidsH)
+            + ' disp:' + cs.display + ' minH:' + cs.minHeight;
+        }
+        progressEl.textContent += dbg;
+      }catch(e){ progressEl.textContent += ' | dbg-err'; }
       const cardWidthNow = clampCardWidth();
       card.style.width = cardWidthNow + 'px';
       const cardHeightNow = card.offsetHeight || 200;

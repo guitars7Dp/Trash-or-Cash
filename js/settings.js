@@ -1,4 +1,4 @@
-  // ---------- Settings (target $/hr, MPG, gas price) ----------
+// ---------- Settings (target $/hr, MPG, gas price) ----------
   // Starting values for a brand-new user who hasn't opened Settings yet.
   const DEFAULTS = { threshold:25, mpg:25, gas:3.50 };
   // Fallback estimation constants used only when the user hasn't filled in
@@ -39,6 +39,22 @@
   // driving costs in gas, derived from the user's own MPG and gas price.
   function costPerMile(){ return settings.gas / settings.mpg; }
 
+  // Same "invalid input falls back to the default" rule the old
+  // `parseFloat(x) || DEFAULTS.x` pattern already applied to blank/non-
+  // numeric input (0 included — `0 || fallback` is `fallback`, since 0
+  // is falsy) — kept as `v <= 0` here rather than `v < 0` specifically
+  // so that existing behavior for 0 doesn't change. What's actually new
+  // is catching NEGATIVE input, which the old `||` pattern did NOT catch
+  // (parseFloat('-5') is truthy, so -5 would have saved as-is). That
+  // matters most for mpg/gas specifically: either one saved as <= 0
+  // would make costPerMile() divide-by-zero or go negative, corrupting
+  // every calculation on every tab until Settings is reopened and fixed
+  // — not just one order's worth of bad data.
+  function parsePositive(raw, fallback){
+    const v = parseFloat(raw);
+    return (isNaN(v) || v <= 0) ? fallback : v;
+  }
+
 
   // ---------- Settings modal (UI wiring) ----------
   // Moved here from later in the original file (it originally sat
@@ -59,17 +75,17 @@
     document.getElementById('setThresholdVal').textContent = '$'+e.target.value;
   });
   function updateDerivedRate(){
-    const mpg = parseFloat(document.getElementById('setMpg').value) || DEFAULTS.mpg;
-    const gas = parseFloat(document.getElementById('setGas').value) || DEFAULTS.gas;
+    const mpg = parsePositive(document.getElementById('setMpg').value, DEFAULTS.mpg);
+    const gas = parsePositive(document.getElementById('setGas').value, DEFAULTS.gas);
     document.getElementById('derivedRate').textContent = '= $'+(gas/mpg).toFixed(3)+' / mile';
   }
   document.getElementById('setMpg').addEventListener('input', updateDerivedRate);
   document.getElementById('setGas').addEventListener('input', updateDerivedRate);
 
   document.getElementById('saveSettings').addEventListener('click', ()=>{
-    settings.threshold = parseFloat(document.getElementById('setThreshold').value) || DEFAULTS.threshold;
-    settings.mpg = parseFloat(document.getElementById('setMpg').value) || DEFAULTS.mpg;
-    settings.gas = parseFloat(document.getElementById('setGas').value) || DEFAULTS.gas;
+    settings.threshold = parsePositive(document.getElementById('setThreshold').value, DEFAULTS.threshold);
+    settings.mpg = parsePositive(document.getElementById('setMpg').value, DEFAULTS.mpg);
+    settings.gas = parsePositive(document.getElementById('setGas').value, DEFAULTS.gas);
     saveSettings();
     modal.classList.remove('show');
     runCheck();
@@ -89,4 +105,3 @@
       document.getElementById('settingsBtn').click();
     }
   };
-

@@ -6,6 +6,12 @@
   // driving speed, and the assumed speed for a Spark/Shipt return trip).
   // Never shown to the user as a "setting" — just reasonable defaults.
   const CONSTANTS = { icSpeed:150, icMph:40, sparkReturnMph:40 };
+  // How close (in $/hr) a TRASH offer has to be to the target to get
+  // flagged "on your radar" in runCheck() below. Hoisted up here (out of
+  // runCheck() itself, where it used to live as a local const) so
+  // recall.js's radar list can use the exact same threshold instead of a
+  // second copy of the number that could drift out of sync later.
+  const WATCH_THRESHOLD = 3;
   // The most recent runCheck() result, kept around so the "Did you take
   // it?" order-tracking prompt (see ORDER TRACKING below) can log it
   // without recalculating anything.

@@ -85,93 +85,123 @@
   .wordmark-img-dark{ display:none; }
   html:not([data-theme="light"]) .wordmark-img-light{ display:none; }
   html:not([data-theme="light"]) .wordmark-img-dark{ display:block; }
+  /* ---------- Button material system ("Glossy Plush") ----------
+     Every clickable button in the app shares this same rendered-surface
+     recipe: a soft highlight coming from one corner (not a flat
+     top-to-bottom fade) simulates a curved, glossy surface catching
+     light, a fine grain layer keeps the gradient from reading as a flat
+     vector fill, and a wide soft ambient shadow underneath gives real
+     lift off the page. Two color families cover every button on screen
+     — gold (var(--caution), for primary/active actions) and neutral
+     (the panel colors, for everything else) — each button below sets
+     just its own background+box-shadow using one of the two; the
+     highlight geometry, shadow layering, and grain are identical across
+     both so every button reads as the same physical material.
+
+     The grain is painted with a ::before pseudo-element instead of an
+     extra HTML element, so this stays a CSS-only change — nothing in
+     index.html needs to move. position:relative + isolation:isolate on
+     each button below gives that button its own local stacking context;
+     within that context the pseudo-element's z-index:-1 paints after
+     the button's own background but before the button's own (plain,
+     unwrapped) text, which is the exact sandwich order needed without
+     the text ever having to be wrapped in a span of its own. */
+  .gear-btn, .mic-btn, .calc-btn, .clear-btn, .tab,
+  .modal-save, .tracklog-btn, .modal-secondary-btn, .modal-close,
+  .tut-back, .tut-next{
+    position:relative; isolation:isolate; overflow:hidden;
+  }
+  .gear-btn::before, .mic-btn::before, .calc-btn::before, .clear-btn::before, .tab::before,
+  .modal-save::before, .tracklog-btn::before, .modal-secondary-btn::before, .modal-close::before,
+  .tut-back::before, .tut-next::before{
+    content:''; position:absolute; inset:0; z-index:-1; border-radius:inherit;
+    background-image:url('data:image/png;base64,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');
+    background-size:56px 56px; mix-blend-mode:overlay; opacity:0.35; pointer-events:none;
+  }
+  /* Gold surface — every primary/active/affirmative button on screen. */
+  .calc-btn, .tab.active, .mic-btn.listening, .modal-save, .tut-next{
+    color:#3a2604;
+    background:
+      radial-gradient(120% 160% at 28% -20%, rgba(255,255,255,0.65), rgba(255,255,255,0) 48%),
+      linear-gradient(180deg, color-mix(in srgb, var(--caution) 88%, white) 0%, var(--caution) 48%, color-mix(in srgb, var(--caution) 82%, black) 100%);
+    box-shadow:
+      inset 0 1.5px 0 rgba(255,255,255,0.55),
+      inset 0 -7px 10px -2px rgba(0,0,0,0.22),
+      0 12px 22px -8px rgba(0,0,0,0.5),
+      0 4px 8px rgba(0,0,0,0.28);
+  }
+  /* Neutral surface — every secondary button on screen. */
+  .gear-btn, .mic-btn, .clear-btn, .tab, .tracklog-btn,
+  .modal-secondary-btn, .modal-close, .tut-back{
+    background:
+      radial-gradient(120% 160% at 28% -20%, rgba(255,255,255,0.18), rgba(255,255,255,0) 48%),
+      linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.06),
+      inset 0 -5px 8px -2px rgba(0,0,0,0.15),
+      0 6px 14px -6px rgba(0,0,0,0.35);
+  }
+  /* Shared pressed state — every button above swaps to this same inset
+     recipe on :active; each button below keeps its own transform depth
+     (2px for most, 3px for the heavier primary actions), since that's a
+     press-weight distinction worth keeping, not part of the material. */
+  .gear-btn:active, .mic-btn:active, .calc-btn:active, .clear-btn:active, .tab:active,
+  .modal-save:active, .tracklog-btn:active, .modal-secondary-btn:active, .modal-close:active,
+  .tut-back:active, .tut-next:active{
+    box-shadow:
+      inset 0 3px 8px rgba(0,0,0,0.35),
+      inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+
   .gear-btn{
     width:40px; height:40px; border-radius:10px; border:1px solid var(--line);
-    background:var(--panel); display:flex; align-items:center; justify-content:center;
+    display:flex; align-items:center; justify-content:center;
     color:var(--muted); cursor:pointer;
-    /* Raised-button shadow recipe, reused (with lighter/heavier weight
-       depending on background) across every clickable button in the
-       app: a thin inset top highlight for a sheen, a solid bottom edge
-       for physical depth, and a soft blur underneath for lift off the
-       page. The :active rule below removes the lift and adds an inset
-       shadow instead, so pressing genuinely looks like pushing the
-       button down onto its own shadow rather than just a color change. */
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.08),
-      0 2px 0 var(--line),
-      0 4px 7px rgba(0,0,0,0.22);
     transition: transform .08s ease, box-shadow .08s ease, background .08s ease;
   }
   .gear-btn:active{
-    background:var(--panel-2);
     transform:translateY(2px);
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
   }
   /* ---------- Tabs ---------- */
   .tabs{ display:flex; gap:8px; margin-bottom:12px; }
   .mic-btn{
     display:flex; align-items:center; justify-content:center; gap:9px;
     width:100%; padding:14px; border-radius:12px; border:1.5px solid var(--line);
-    background:var(--panel); color:var(--text); font-family:'Oswald',sans-serif; font-weight:600;
+    color:var(--text); font-family:'Oswald',sans-serif; font-weight:600;
     font-size:13px; letter-spacing:0.03em; cursor:pointer; margin-bottom:14px;
     -webkit-tap-highlight-color:transparent;
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.08),
-      0 2px 0 var(--line),
-      0 4px 8px rgba(0,0,0,0.22);
     transition: transform .08s ease, box-shadow .08s ease, background .08s ease;
   }
   .mic-btn svg{ width:18px; height:18px; flex-shrink:0; }
   .mic-btn:active{
     transform:translateY(2px);
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
   }
   .mic-btn.listening{
-    background:var(--caution); color:var(--bg); border-color:var(--caution);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.35),
-      0 2px 0 rgba(0,0,0,0.2),
-      0 4px 8px rgba(0,0,0,0.25);
+    border-color:var(--caution);
   }
   .action-row{ display:flex; gap:10px; margin-bottom:14px; }
   .calc-btn{
     flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
-    padding:15px; border-radius:12px; border:none; background:var(--caution);
-    color:var(--bg); font-family:'Oswald',sans-serif; font-weight:600; font-size:14px; letter-spacing:0.03em;
+    padding:15px; border-radius:12px; border:none;
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:14px; letter-spacing:0.03em;
     cursor:pointer; -webkit-tap-highlight-color:transparent;
-    /* Heavier version of the raised-button recipe — this is the app's
-       primary action, so it gets the strongest lift/depth of any button
-       on screen. */
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.3),
-      inset 0 -3px 5px rgba(0,0,0,0.12),
-      0 3px 0 rgba(0,0,0,0.25),
-      0 5px 10px rgba(0,0,0,0.3);
     transition: transform .08s ease, box-shadow .08s ease;
   }
   .calc-btn:active{
     transform:translateY(3px);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.2),
-      inset 0 2px 4px rgba(0,0,0,0.25);
   }
   .calc-btn svg{ width:17px; height:17px; flex-shrink:0; }
   .clear-row{ display:flex; }
   .clear-btn{
     display:flex; align-items:center; gap:6px; padding:10px 14px; border-radius:10px;
-    border:1.5px solid var(--line); background:var(--panel); color:var(--text);
+    border:1.5px solid var(--line); color:var(--text);
     font-family:'Space Mono',monospace; font-weight:700; font-size:12.5px; letter-spacing:0.05em;
     -webkit-tap-highlight-color:transparent; cursor:pointer;
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.08),
-      0 2px 0 var(--line),
-      0 4px 7px rgba(0,0,0,0.22);
     transition: transform .08s ease, box-shadow .08s ease, background .08s ease;
   }
   .clear-btn:active{
-    background:var(--panel-2); border-color:var(--caution);
+    border-color:var(--caution);
     transform:translateY(2px);
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
   }
   .clear-btn svg{ width:14px; height:14px; flex-shrink:0; }
   .tab{
@@ -183,25 +213,16 @@
        box on the tab itself, the shorter one-line labels just sat at
        the top of their now-taller box instead of centered in it. */
     min-height:44px; padding:12px 6px; border-radius:10px;
-    border:1.5px solid var(--line); background:var(--panel);
+    border:1.5px solid var(--line);
     font-family:'Space Mono',monospace; font-weight:700; font-size:12.5px;
     letter-spacing:0.03em; color:var(--muted); cursor:pointer;
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.08),
-      0 2px 0 var(--line),
-      0 4px 7px rgba(0,0,0,0.2);
     transition: transform .08s ease, box-shadow .08s ease, background .08s ease, border-color .08s ease, color .08s ease;
   }
   .tab:active{
     transform:translateY(2px);
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.28);
   }
   .tab.active{
-    border-color:var(--caution); color:var(--bg); background:var(--caution);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.35),
-      0 2px 0 rgba(0,0,0,0.2),
-      0 4px 8px rgba(0,0,0,0.25);
+    border-color:var(--caution);
   }
   /* ---------- Field blocks ---------- */
   .field-group{ margin-bottom:14px; }
@@ -226,7 +247,10 @@
   /* ---------- More details (optional) ---------- */
   .more-toggle{
     width:100%; display:flex; align-items:center; justify-content:space-between;
-    background:transparent; border:1px dashed var(--line-bright); border-radius:12px;
+    /* Border option B ("filled panel, no border") — a soft fill in the
+       app's own secondary panel color marks the section instead of an
+       outline, replacing the original dashed border. */
+    background:var(--panel-2); border:none; border-radius:12px;
     padding:12px 14px; color:var(--muted); font-family:'Space Mono',monospace; font-weight:700;
     font-size:12px; letter-spacing:0.05em; cursor:pointer; margin-bottom:10px;
   }
@@ -239,7 +263,10 @@
   /* ---------- Waiting note (shown until required fields are filled) ---------- */
   .waiting-note{
     text-align:center; padding:18px 10px 16px;
-    border:1px dashed var(--line-bright); border-radius:14px; margin:6px 0 20px;
+    /* Border option B, same as .more-toggle above — filled panel color
+       instead of the original dashed border. */
+    border:none; border-radius:14px; margin:6px 0 20px;
+    background:var(--panel-2);
   }
   html:not([data-theme="light"]) .waiting-note{
     background:#2A2724;
@@ -365,20 +392,12 @@
   .slider-row input[type=range]{ flex:1; accent-color:var(--caution); }
   .slider-value{ font-family:'Space Mono',monospace; font-weight:700; font-size:16px; min-width:52px; text-align:right; }
   .modal-save{
-    width:100%; padding:16px; border-radius:12px; border:none; background:var(--caution);
-    color:var(--bg); font-family:'Oswald',sans-serif; font-weight:600; font-size:15px; cursor:pointer; margin-top:6px;
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.3),
-      inset 0 -3px 5px rgba(0,0,0,0.12),
-      0 3px 0 rgba(0,0,0,0.25),
-      0 5px 10px rgba(0,0,0,0.3);
+    width:100%; padding:16px; border-radius:12px; border:none;
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:15px; cursor:pointer; margin-top:6px;
     transition: transform .08s ease, box-shadow .08s ease;
   }
   .modal-save:active{
     transform:translateY(3px);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.2),
-      inset 0 2px 4px rgba(0,0,0,0.25);
   }
   .derived-rate{ font-family:'Space Mono',monospace; font-weight:700; font-size:12px; color:var(--caution); margin-top:6px; }
   /* ---------- Order tracking ---------- */
@@ -390,17 +409,12 @@
   .tracklog-caption{ display:block; font-size:11.5px; font-weight:400; color:var(--muted); margin-top:3px; }
   .tracklog-btns{ display:flex; gap:8px; flex-shrink:0; }
   .tracklog-btn{
-    padding:9px 16px; border-radius:10px; border:1.5px solid var(--line-bright); background:transparent;
+    padding:9px 16px; border-radius:10px; border:1.5px solid var(--line-bright);
     color:var(--text); font-family:'Oswald',sans-serif; font-weight:600; font-size:12px; cursor:pointer;
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.06),
-      0 2px 0 var(--line-bright),
-      0 3px 6px rgba(0,0,0,0.2);
     transition: transform .08s ease, box-shadow .08s ease;
   }
   .tracklog-btn:active{
     transform:translateY(2px);
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.25);
   }
   .tracklog-btn.yes{ border-color:var(--cash); color:var(--cash); }
   .tracklog-confirm{ font-size:13px; color:var(--muted); }
@@ -418,34 +432,24 @@
   .modal-secondary-btn{
     flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
     padding:12px 8px; border-radius:12px; border:1.5px solid var(--line-bright);
-    background:var(--panel); color:var(--text); font-family:'Space Mono',monospace;
+    color:var(--text); font-family:'Space Mono',monospace;
     font-weight:700; font-size:11.5px; letter-spacing:0.03em; cursor:pointer;
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.08),
-      0 2px 0 var(--line-bright),
-      0 4px 7px rgba(0,0,0,0.2);
     transition: transform .08s ease, box-shadow .08s ease, background .08s ease, border-color .08s ease;
   }
   .modal-secondary-btn:active{
-    background:var(--panel-2); border-color:var(--caution);
+    border-color:var(--caution);
     transform:translateY(2px);
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.28);
   }
   .modal-secondary-btn svg{ width:15px; height:15px; flex-shrink:0; }
   /* ---------- FAQ modal ---------- */
   .modal-close{
     position:absolute; top:14px; right:14px; width:32px; height:32px; border-radius:9px;
-    border:1px solid var(--line); background:var(--panel-2); color:var(--muted);
+    border:1px solid var(--line); color:var(--muted);
     display:flex; align-items:center; justify-content:center; cursor:pointer;
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.08),
-      0 2px 0 var(--line),
-      0 3px 6px rgba(0,0,0,0.2);
     transition: transform .08s ease, box-shadow .08s ease;
   }
   .modal-close:active{
     transform:translateY(2px);
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.28);
   }
   .modal-close svg{ width:16px; height:16px; }
   .modal-pos{ position:relative; }
@@ -588,30 +592,17 @@
     transition: transform .08s ease, box-shadow .08s ease;
   }
   .tut-back{
-    background:var(--panel-2); border:1.5px solid var(--line-bright); color:var(--text);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.08),
-      0 2px 0 var(--line-bright),
-      0 3px 6px rgba(0,0,0,0.3);
+    border:1.5px solid var(--line-bright); color:var(--text);
   }
   .tut-back:active{
     transform:translateY(2px);
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
   }
   .tut-back:disabled{ opacity:0.35; cursor:default; transform:none !important; }
   .tut-next{
-    background:var(--caution); border:none; color:var(--bg);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.3),
-      inset 0 -3px 5px rgba(0,0,0,0.12),
-      0 3px 0 rgba(0,0,0,0.3),
-      0 5px 12px rgba(0,0,0,0.4);
+    border:none;
   }
   .tut-next:active{
     transform:translateY(3px);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.2),
-      inset 0 2px 4px rgba(0,0,0,0.25);
   }
   /* ---------- Cold-launch flash screen ---------- */
   #flashScreen{

@@ -210,7 +210,16 @@
   .verdict-sub{ font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text); opacity:0.85; margin-top:6px; }
 
   /* Tilt bar signature element */
-  .tilt-wrap{ margin:18px auto 4px; max-width:280px; }
+  /* width:100% is the actual fix for the "TRASHTARGETCASH" bug: .verdict-card
+     became a flex column (see below), and a flex item with auto left/right
+     margins shrink-wraps to its own content width instead of filling the
+     column — so this 280px-max box was collapsing down to the exact width
+     of its own TRASH/TARGET/CASH text, leaving justify-content:space-between
+     nothing to distribute and the three words touching. width:100% (capped
+     by max-width:280px) restores the box to its real intended width, the
+     auto margins center that within the card again, and the labels spread
+     out properly. */
+  .tilt-wrap{ margin:18px auto 4px; max-width:280px; width:100%; }
   .tilt-track{
     position:relative; height:10px; border-radius:6px; background:var(--panel-2);
     border:1px solid var(--line); overflow:visible;

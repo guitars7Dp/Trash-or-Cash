@@ -278,7 +278,7 @@
     display:flex; align-items:center; gap:10px;
     font-size:13px; color:var(--muted); margin-bottom:18px;
   }
-  .modal .modal-sub svg{ width:44px; height:44px; flex:0 0 auto; }
+  .modal .modal-sub svg, .modal .modal-sub img.rocco-blink-avatar{ width:44px; height:44px; flex:0 0 auto; object-fit:contain; }
   .modal .modal-sub span{ flex:1; }
   .modal .field-group{ margin-bottom:16px; }
   .slider-row{ display:flex; align-items:center; gap:12px; }

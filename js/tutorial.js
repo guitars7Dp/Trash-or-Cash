@@ -659,24 +659,13 @@
     positionForStep();
     spotlight.classList.add('tut-show');
     card.classList.add('tut-show');
-
-    // iOS Safari's dynamic toolbar (the address bar that shrinks/grows as
-    // you scroll) can still be mid-animation right when the scroll above
-    // finishes, so the rect positionForStep() just measured can be a few
-    // pixels off from where the target actually settles a moment later.
-    // The spotlight is position:fixed, so it doesn't drift back into sync
-    // on its own the way the target (a normal in-flow element) does —
-    // instead it stays exactly where it was told to go, which is what
-    // read as the highlighted card sitting "too high" with extra empty
-    // space below it, inside a spotlight cutout that no longer matched
-    // the target's real position. One more measure-and-reposition pass
-    // shortly after catches that settle. It's a no-op (nothing visibly
-    // moves) if the viewport was already settled, and guarded by step
-    // index so it can't fire after the user has already moved on.
-    const stepAtSchedule = stepIndex;
-    setTimeout(()=>{
-      if(active && stepIndex === stepAtSchedule) positionForStep();
-    }, 150);
+    // A blind fixed-delay re-check used to live here to catch iOS Safari's
+    // toolbar settling after the scroll above. Pulled it: the rAF-coalesced
+    // scroll/visualViewport listeners bound in startTutorial() already
+    // catch that same late settle, reactively, exactly when it happens —
+    // having both was firing two uncoordinated corrections back to back
+    // (a small one, then another ~100ms later), which is what turned into
+    // the visible double-hop on steps 8-10 instead of one clean settle.
   }
 
   // Moves to a new step: runs the outgoing step's onExit (if any), runs

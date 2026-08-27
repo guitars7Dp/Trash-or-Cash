@@ -1,4 +1,4 @@
-  /* ============ ORDER TRACKING ============
+/* ============ ORDER TRACKING ============
      After each calculated result, the app asks "Did you take it?" (the
      tracklog prompt in the HTML). Answering yes logs that result — what
      the app estimated, not what actually happened — to a running list the
@@ -7,7 +7,16 @@
      user copies the CSV out themselves. Reachable normally via Settings ->
      ORDER LOG; also openable directly by loading the app with a `?log=1`
      URL query param (see openLogOnLoad further down), handy for quickly
-     checking logged data without hunting through Settings. */
+     checking logged data without hunting through Settings.
+
+     "Clear" never deletes anything. Logged entries stay in localStorage
+     permanently (see loadOrderLog/saveOrderLog below); the START FRESH
+     button (clearLogBtn) just moves a "cleared at" cursor (see
+     loadClearedAt/saveClearedAt) forward to now, which is what the
+     default "Since last clear" filter view hides behind. Older entries
+     are never gone — the filter dropdown (#logFilterSelect) can always
+     switch to Today/This Week/This Month/All Time to see them again, and
+     COPY AS CSV exports whatever the current filter is showing. */
   const PLATFORM_LABELS = { spark:'Spark', instacart:'Instacart', shipt:'Shipt', food:'Food Delivery' };
 
   function loadOrderLog(){
@@ -15,6 +24,43 @@
   }
   function saveOrderLog(entries){
     try{ localStorage.setItem('toc_order_log', JSON.stringify(entries)); }catch(e){}
+  }
+  // The "cleared at" cursor for the default filter view — see the big
+  // comment above. 0 (never cleared) means "since last clear" shows
+  // everything, which is exactly right for someone who's never hit
+  // START FRESH yet.
+  function loadClearedAt(){
+    try{ return +localStorage.getItem('toc_log_cleared_at') || 0; }catch(e){ return 0; }
+  }
+  function saveClearedAt(ts){
+    try{ localStorage.setItem('toc_log_cleared_at', String(ts)); }catch(e){}
+  }
+  // Start-of-period cutoffs, all in the device's local time (so "today"
+  // matches whatever day it actually is for the person holding the
+  // phone, not UTC). Week starts Sunday, matching how the US gig
+  // platforms this app covers report weekly pay periods.
+  function startOfToday(){
+    const d = new Date(); d.setHours(0,0,0,0); return d.getTime();
+  }
+  function startOfWeek(){
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - d.getDay()); return d.getTime();
+  }
+  function startOfMonth(){
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(1); return d.getTime();
+  }
+  // Returns { entries, emptyMsg } for whatever filter is currently
+  // selected — shared by renderLogView() and the CSV export so "copy as
+  // csv" always exports exactly what's on screen.
+  function getFilteredEntries(){
+    const all = loadOrderLog();
+    const filter = (document.getElementById('logFilterSelect') || {}).value || 'current';
+    let cutoff = 0, emptyMsg = 'Nothing logged yet.';
+    if(filter === 'today'){ cutoff = startOfToday(); emptyMsg = 'Nothing logged today.'; }
+    else if(filter === 'week'){ cutoff = startOfWeek(); emptyMsg = 'Nothing logged this week.'; }
+    else if(filter === 'month'){ cutoff = startOfMonth(); emptyMsg = 'Nothing logged this month.'; }
+    else if(filter === 'all'){ cutoff = 0; emptyMsg = 'Nothing logged yet.'; }
+    else { cutoff = loadClearedAt(); emptyMsg = cutoff ? 'Nothing logged since your last clear — switch "Show" above to look further back.' : 'Nothing logged yet.'; }
+    return { entries: all.filter(e => e.ts > cutoff), emptyMsg };
   }
   // Logs the most recent result (see lastResult above) as one entry: the
   // platform, CASH/TRASH verdict, and every estimated number, timestamped.
@@ -62,13 +108,16 @@
   }
 
   // Builds the order-log table shown in the Order Log modal, most recent
-  // entry first. Rebuilt from scratch each time the modal opens (see
-  // settingsLogBtn / openLogOnLoad below) rather than kept in sync live.
+  // entry first, respecting whatever the "Show" filter is currently set
+  // to. Rebuilt from scratch each time the modal opens or the filter
+  // changes (see settingsLogBtn / openLogOnLoad / logFilterSelect below)
+  // rather than kept in sync live.
   function renderLogView(){
     const wrap = document.getElementById('logListWrap');
-    const entries = loadOrderLog().slice().reverse();
+    const { entries: filtered, emptyMsg } = getFilteredEntries();
+    const entries = filtered.slice().reverse();
     if(entries.length === 0){
-      wrap.innerHTML = '<div class="log-empty">Nothing logged yet.</div>';
+      wrap.innerHTML = '<div class="log-empty">'+emptyMsg+'</div>';
       return;
     }
     let html = '<table class="log-table"><thead><tr>'
@@ -90,12 +139,18 @@
 
   const logModal = document.getElementById('logModal');
   document.getElementById('closeLogBtn').addEventListener('click', ()=> logModal.classList.remove('show'));
-  // Exports the whole log as CSV text to the clipboard (falling back to a
-  // plain prompt() dialog — selectable/copyable by hand — on browsers or
-  // permission states where the Clipboard API isn't available), for
-  // pasting into a spreadsheet to compare estimates against reality.
+  // Re-render whenever the "Show" filter changes.
+  const logFilterSelect = document.getElementById('logFilterSelect');
+  if(logFilterSelect){
+    logFilterSelect.addEventListener('change', renderLogView);
+  }
+  // Exports whatever the current filter is showing as CSV text to the
+  // clipboard (falling back to a plain prompt() dialog — selectable/
+  // copyable by hand — on browsers or permission states where the
+  // Clipboard API isn't available), for pasting into a spreadsheet to
+  // compare estimates against reality.
   document.getElementById('copyLogBtn').addEventListener('click', ()=>{
-    const entries = loadOrderLog();
+    const { entries } = getFilteredEntries();
     let csv = 'Date,Platform,App Said,App Est $/hr\n';
     entries.forEach(e=>{
       const d = new Date(e.ts);
@@ -113,9 +168,15 @@
       window.prompt('Copy this:', csv);
     }
   });
+  // Non-destructive: nothing is ever deleted from storage here. This just
+  // moves the "cleared at" cursor to now, so the default "Since last
+  // clear" view starts fresh — past entries stay fully intact and
+  // reachable any time via the Today/This Week/This Month/All Time
+  // options in the filter above.
   document.getElementById('clearLogBtn').addEventListener('click', ()=>{
-    if(window.confirm('Clear the entire order log? This cannot be undone.')){
-      saveOrderLog([]);
+    if(window.confirm('Start a fresh log? Nothing is deleted — past entries stay available under "This Week", "This Month", or "All Time" in the Show menu above.')){
+      saveClearedAt(Date.now());
+      if(logFilterSelect) logFilterSelect.value = 'current';
       renderLogView();
     }
   });
@@ -125,14 +186,17 @@
   let openLogOnLoad = false;
   try{ openLogOnLoad = /(?:^|[?&])log=1(?:&|$)/.test(window.location.search); }catch(e){}
   if(openLogOnLoad){
+    if(logFilterSelect) logFilterSelect.value = 'current';
     renderLogView();
     logModal.classList.add('show');
   }
   const settingsLogBtn = document.getElementById('openLogBtn');
   if(settingsLogBtn){
     settingsLogBtn.addEventListener('click', ()=>{
+      // Always reopen on the default filter, so the log never *appears*
+      // empty just because it was left on an old filter selection.
+      if(logFilterSelect) logFilterSelect.value = 'current';
       renderLogView();
       logModal.classList.add('show');
     });
   }
-

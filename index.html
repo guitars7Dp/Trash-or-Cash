@@ -254,11 +254,21 @@
   <div class="modal modal-pos">
     <button class="modal-close" id="closeLogBtn" aria-label="Close">&times;</button>
     <h2>Order log</h2>
-    <div class="modal-sub"><span>Every offer you've said yes or no to, with what Rocco estimated at the time.</span></div>
+    <div class="modal-sub"><span>Every offer you've logged, with what Rocco estimated at the time.</span></div>
+    <div class="log-filter-row">
+      <label for="logFilterSelect" class="log-filter-label">Show</label>
+      <select id="logFilterSelect" class="log-filter-select">
+        <option value="current">Since last clear</option>
+        <option value="today">Today</option>
+        <option value="week">This week</option>
+        <option value="month">This month</option>
+        <option value="all">All time</option>
+      </select>
+    </div>
     <div id="logListWrap"></div>
     <div class="log-actions">
       <button class="modal-secondary-btn" id="copyLogBtn" type="button">COPY AS CSV</button>
-      <button class="modal-secondary-btn" id="clearLogBtn" type="button">CLEAR LOG</button>
+      <button class="modal-secondary-btn" id="clearLogBtn" type="button">START FRESH</button>
     </div>
   </div>
 </div>

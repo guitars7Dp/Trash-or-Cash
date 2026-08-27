@@ -97,6 +97,7 @@
   if(tracklogYesBtn){
     tracklogYesBtn.addEventListener('click', ()=>{
       logOrder();
+      markLastRecallLogged();
       document.getElementById('tracklogBtns').classList.add('hidden');
       document.getElementById('tracklogConfirm').classList.remove('hidden');
     });

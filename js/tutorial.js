@@ -180,10 +180,23 @@
   // downloading, #tutRocco would render at some fallback size and then
   // visibly resize/settle once it arrived — reads as "the character
   // moving into place." A replay never showed this because every pose
-  // was already browser-cached from the first run. Kicking every fetch
-  // off immediately (in parallel, well before the tutorial can actually
-  // start) gives them the most possible time to finish first.
-  Object.values(ROCCO_POSES).forEach(pose => { new Image().src = pose.src; });
+  // was already browser-cached from the first run.
+  //
+  // Kicking the fetches off early isn't enough on its own, though —
+  // over a real connection, six images can still still be arriving
+  // one-by-one well after the tutorial has already started, so later
+  // steps could still show the same settle even with a head start.
+  // roccoPosesReady is a promise that resolves once every pose has
+  // actually finished loading (not just started); startTutorial() below
+  // waits on it — same pattern as the existing document.fonts.ready
+  // wait — so the very first run doesn't visibly begin until every pose
+  // for all 12 steps is already decoded and ready to show instantly.
+  const roccoPosesReady = Promise.all(Object.values(ROCCO_POSES).map(pose => new Promise(resolve => {
+    const img = new Image();
+    img.onload = resolve;
+    img.onerror = resolve; // don't let one bad file hang the whole tutorial
+    img.src = pose.src;
+  })));
 
   // Places #tutRocco against #tutBar or #tutShelf per the pose's anchor.
   // Both fixtures are real elements inside the card, so their rects are
@@ -260,7 +273,7 @@
       target: null,
       rocco: { pose: 'pawup' },
       title: "Hey, I'm Rocco!",
-      text: "I dig into a gig offer and tell you if it's actually worth taking. Feed me the details and I'll instantly compare it against the $/hr you want to make — after gas — so you know right away if it's CASH or TRASH. Let me show you around in a few quick steps."
+      text: "I dig into a gig offer and tell you if it's actually worth taking. Feed me the details and I'll instantly compare it against the $/hr you want to make — after gas — so you know right away if it's TRASH or CASH. Let me show you around in a few quick steps."
     },
     {
       // '.tabs' (class), not '#tabs' — the tab bar's id was dropped from
@@ -311,8 +324,8 @@
       // seated/coin pose is back — and it's the strongest thematic fit
       // in the whole set for the CASH/TRASH verdict specifically.
       rocco: { pose: 'seatedCoin' },
-      title: 'CASH or TRASH',
-      text: "This is the verdict. CASH means the offer meets or beats your target pay per hour after gas — TRASH means it falls short. The stats below break down net pay, gross pay, fuel cost, and time."
+      title: 'TRASH or CASH',
+      text: "This is the verdict. TRASH means the offer falls short of your target pay per hour after gas — CASH means it meets or beats it. The stats below break down net pay, gross pay, fuel cost, and time."
     },
     {
       target: '#watchBadge',
@@ -354,28 +367,40 @@
   // when the address bar auto-hides on scroll and shrinks back when it
   // reappears, even though nothing about the actual page changed. Every
   // "does the target+card group fit, or do we need to pin to the top"
-  // decision reads window.innerHeight, so measuring it fresh on every
-  // single step meant the SAME step (CASH or TRASH, the radar badge)
-  // could get a different answer depending on whatever toolbar state
-  // happened to be showing at that exact moment — which is exactly the
-  // "sometimes it centers, sometimes it doesn't" Derek reported. These
-  // two track a settled reference size instead: trackViewportSize()
-  // (called at the top of positionForStep(), so every code path that
-  // measures the viewport goes through it first) only lets the height
-  // shrink on its own — an actual rotation or window resize is detected
-  // by the WIDTH changing at the same time, and only then does the
-  // reference reset outright. Everywhere below that used to read
-  // window.innerHeight/innerWidth directly now reads these instead.
+  // decision reads this, so measuring it fresh on every single step
+  // meant the SAME step (CASH or TRASH, the radar badge) could get a
+  // different answer depending on whatever toolbar state happened to be
+  // showing at that exact moment. stableViewportW/H are read through
+  // trackViewportSize() (called at the top of positionForStep(), so
+  // every code path that measures the viewport goes through it first)
+  // instead of reading window.innerWidth/innerHeight directly at each
+  // call site, for two reasons: window.visualViewport, when the browser
+  // supports it, is the more accurate live reading (purpose-built for
+  // exactly this — it already reflects the toolbar's current state,
+  // unlike window.innerHeight in some iOS versions); and having ONE
+  // source populated by ONE function means every positioning
+  // calculation in a single pass agrees on the same numbers even if the
+  // toolbar is mid-animation. It always takes the latest reading — an
+  // earlier version of this only let the height shrink, never grow,
+  // which was meant to avoid exactly this kind of inconsistency, but
+  // backfired on a first run specifically: the toolbar is fullest (the
+  // viewport smallest) right at page load, so that version would lock
+  // onto that smallest-ever reading for the rest of the run and never
+  // adopt the extra room once the toolbar naturally collapsed during
+  // the tutorial's own scrolling — which is exactly why the verdict
+  // card kept failing to center on a first run only. The resize
+  // listeners below (both window and visualViewport) re-run
+  // positionForStep() whenever the toolbar's state actually changes, so
+  // simply trusting the latest reading self-corrects promptly instead.
   let stableViewportW = window.innerWidth;
   let stableViewportH = window.innerHeight;
   function trackViewportSize(){
-    const w = window.innerWidth, h = window.innerHeight;
-    if(Math.abs(w - stableViewportW) > 40){
-      stableViewportW = w;
-      stableViewportH = h;
+    if(window.visualViewport){
+      stableViewportW = window.visualViewport.width;
+      stableViewportH = window.visualViewport.height;
     } else {
-      stableViewportW = w;
-      stableViewportH = Math.min(stableViewportH, h);
+      stableViewportW = window.innerWidth;
+      stableViewportH = window.innerHeight;
     }
   }
   // The one element currently shrunk to make room for the card (see
@@ -510,7 +535,15 @@
         top = Math.min(top, rect.top - pad - cardHeight);
       }
 
-      let left = rect.left + rect.width/2 - cardWidth/2;
+      // Center the card on the VIEWPORT, not on the target. Centering on
+      // the target meant that any target sitting off to one side of the
+      // screen (a platform tab, a button that isn't itself centered in
+      // the app's layout) pulled the card off to that same side — instead
+      // of the card staying put in the horizontal whitespace regardless
+      // of where the thing it's pointing at happens to sit. The spotlight
+      // cutout above still tracks the target's real position exactly;
+      // only the card's horizontal placement is decoupled from it now.
+      let left = (stableViewportW - cardWidth) / 2;
       left = Math.max(10, Math.min(left, stableViewportW - cardWidth - 10));
 
       left += (step.cardDx || 0);
@@ -677,15 +710,26 @@
       resizeHandlerBound = true;
       window.addEventListener('resize', ()=>{ if(active) positionForStep(); });
       window.addEventListener('scroll', ()=>{ if(active) positionForStep(); }, {passive:true});
+      // Safari's address-bar show/hide changes window.visualViewport
+      // without always firing window's own 'resize' event — listening
+      // here too catches that toolbar transition directly instead of
+      // waiting on a different event that might not fire.
+      if(window.visualViewport){
+        window.visualViewport.addEventListener('resize', ()=>{ if(active) positionForStep(); });
+      }
     }
 
-    try{
-      if(document.fonts && document.fonts.ready){
-        document.fonts.ready.then(()=>{ if(active) renderStep(); });
-        return;
-      }
-    }catch(e){}
-    renderStep();
+    // Wait on fonts AND every pose image before the first visible render
+    // — same reasoning as the fonts wait alone used to have: whichever
+    // is slower, it's better spent before the overlay ever appears than
+    // causing a jump after it's already shown. In the common case both
+    // resolve almost immediately (fonts already loaded, poses already
+    // cached from a previous run) so this adds no visible delay.
+    const fontsReady = (function(){
+      try{ return (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve(); }
+      catch(e){ return Promise.resolve(); }
+    })();
+    Promise.all([fontsReady, roccoPosesReady]).then(()=>{ if(active) renderStep(); });
   }
 
   // Closes the tutorial overlay. `markSeen` records toc_tutorial_seen so

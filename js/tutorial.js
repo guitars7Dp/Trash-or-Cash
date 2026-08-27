@@ -263,8 +263,12 @@
       roccoEl.style.transform = 'none';
     }
 
-    roccoEl.style.left = left + 'px';
-    roccoEl.style.top = (ey - pose.gy * pose.w) + 'px';
+    // bar/shelf/wall rects above are visual-viewport-relative (that's what
+    // getBoundingClientRect() always returns); roccoEl is position:fixed,
+    // which is relative to the layout viewport — see vvOffsetTop()/
+    // vvOffsetLeft() above for why those two need reconciling here.
+    roccoEl.style.left = (left + vvOffsetLeft()) + 'px';
+    roccoEl.style.top = (ey - pose.gy * pose.w + vvOffsetTop()) + 'px';
     roccoEl.classList.add('tut-show');
   }
 
@@ -418,6 +422,30 @@
       stableViewportH = window.innerHeight;
     }
   }
+
+  // The actual root cause of the spotlight/card/Rocco gap on scrolled-down
+  // steps (verdict card, watch badge, settings): every position:fixed
+  // element on the page is positioned relative to the LAYOUT viewport, but
+  // getBoundingClientRect() — what every rect in this file comes from —
+  // reports coordinates in the VISUAL viewport. Those two agree at the top
+  // of the page, but as soon as Safari's address bar collapses (which
+  // happens on exactly the steps that need to scroll to reach their
+  // target), the visual viewport shifts down relative to the layout
+  // viewport by the collapsed toolbar's height, and every position:fixed
+  // top/left set from a getBoundingClientRect() rect lands that same
+  // amount too high — which is exactly the "small gap above, big gap
+  // below" shape measured on steps 8-10 and nowhere else. This isn't a
+  // timing thing that settles late (that's why the earlier resync/rAF
+  // fixes didn't touch it) — window.visualViewport.offsetTop is the
+  // standard, always-current correction for it: add it to every fixed
+  // element's top, and offsetLeft to every left, and the two coordinate
+  // spaces line back up regardless of how much of the toolbar is showing.
+  function vvOffsetTop(){
+    return window.visualViewport ? window.visualViewport.offsetTop : 0;
+  }
+  function vvOffsetLeft(){
+    return window.visualViewport ? window.visualViewport.offsetLeft : 0;
+  }
   // The one element currently shrunk to make room for the card (see
   // shrinkTargetToFit() below) — tracked so it can be restored to full
   // size the moment the tutorial moves off it, whether that's the next
@@ -515,8 +543,8 @@
 
       const rect = targetEl.getBoundingClientRect();
       spotlight.classList.add('tut-show');
-      spotlight.style.top = (rect.top - pad) + 'px';
-      spotlight.style.left = (rect.left - pad) + 'px';
+      spotlight.style.top = (rect.top - pad + vvOffsetTop()) + 'px';
+      spotlight.style.left = (rect.left - pad + vvOffsetLeft()) + 'px';
       spotlight.style.width = (rect.width + pad*2) + 'px';
       spotlight.style.height = (rect.height + pad*2) + 'px';
 
@@ -563,8 +591,8 @@
 
       left += (step.cardDx || 0);
       left = Math.max(10, Math.min(left, stableViewportW - cardWidth - 10));
-      card.style.top = top + 'px';
-      card.style.left = left + 'px';
+      card.style.top = (top + vvOffsetTop()) + 'px';
+      card.style.left = (left + vvOffsetLeft()) + 'px';
       positionRocco(step);
     } else {
       restoreShrunkTarget();
@@ -583,8 +611,8 @@
       const cardWidth = clampCardWidth();
       card.style.width = cardWidth + 'px';
       const cardHeight = card.offsetHeight || 200;
-      card.style.left = ((stableViewportW - cardWidth) / 2) + 'px';
-      card.style.top = Math.max(10, (stableViewportH - cardHeight) / 2) + 'px';
+      card.style.left = ((stableViewportW - cardWidth) / 2 + vvOffsetLeft()) + 'px';
+      card.style.top = (Math.max(10, (stableViewportH - cardHeight) / 2) + vvOffsetTop()) + 'px';
       positionRocco(step);
     }
   }

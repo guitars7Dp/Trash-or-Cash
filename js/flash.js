@@ -11,24 +11,37 @@
 // tutorial) never overlaps or races, regardless of how fast each script
 // happens to execute.
 //
-// Only plays on a true cold launch, not on every resume from background.
-// sessionStorage is what makes that distinction: it survives the app
-// being backgrounded/suspended (and, on iOS, even a background reload of
-// the page while the app is still open in the app switcher), but gets
-// cleared the moment the app is actually closed (swiped away) and
-// reopened fresh. So "flag already set" == "we've already shown the
-// splash this real session" == skip it; a genuinely new session starts
-// with no flag, so the splash plays exactly once per true open.
+// Ideally this would only play on a genuine close-and-reopen, never on a
+// mere resume from background. There's no reliable way to tell those two
+// apart from JS, though: both a true close+relaunch and iOS tearing down
+// and reloading a long-backgrounded page look identical to the page when
+// it starts back up -- a plain fresh load with nothing in memory. Any
+// storage that survives a page reload (which is what "surviving
+// backgrounding" requires) survives a real close the exact same way, so
+// there's no flag that's true for one and false for the other.
+//
+// Given that, this plays once per calendar day (local time) instead:
+// first launch of the day shows it, everything else that same day
+// (backgrounded-and-resumed or genuinely closed-and-reopened) skips it.
+// Stores the date it last played, not just a played/not-played flag, in
+// localStorage specifically because it needs to survive a background
+// reload without resetting -- sessionStorage was tried first and doesn't
+// (see the flash-screen-persistence-fix note for that history).
 (function(){
   var flash = document.getElementById('flashScreen');
   var HOLD_MS = 2500;   // how long the splash stays fully visible
   var FADE_MS = 400;    // fade-out duration once finish() is triggered
   var done = false;
 
-  var alreadyPlayed = false;
-  try { alreadyPlayed = sessionStorage.getItem('tocFlashPlayed') === '1'; } catch(e){}
+  function todayKey(){
+    var d = new Date();
+    return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate();
+  }
 
-  if(alreadyPlayed){
+  var alreadyPlayedToday = false;
+  try { alreadyPlayedToday = localStorage.getItem('tocFlashPlayedDay') === todayKey(); } catch(e){}
+
+  if(alreadyPlayedToday){
     // Skip straight to the "finished" state with no visible splash at
     // all — hide it before it can ever paint, and set the done flag
     // synchronously so the tutorial-engine script (whenever it loads)
@@ -42,7 +55,7 @@
   function finish(){
     if(done) return; // guards against the timer and a tap both firing finish()
     done = true;
-    try { sessionStorage.setItem('tocFlashPlayed', '1'); } catch(e){}
+    try { localStorage.setItem('tocFlashPlayedDay', todayKey()); } catch(e){}
     flash.style.opacity = '0';
     setTimeout(function(){
       flash.style.display = 'none';

@@ -1,4 +1,4 @@
-  // ---------- Help & FAQ ----------
+// ---------- Help & FAQ ----------
   // Question/answer pairs shown in the Help & FAQ modal (opened via the
   // gear icon -> HELP & FAQ). Rendered into #faqList as expandable
   // accordion items just below; edit the copy here, no HTML changes needed.
@@ -48,6 +48,10 @@
       a: 'Tap the trash-can icon next to CALCULATE. It only clears the fields on the tab you\'re currently viewing.'
     },
     {
+      q: 'How does Recall work?',
+      a: "Tap the clock icon next to CALCULATE to refill whichever tab you're on with your most recently calculated order — on any platform, whether you logged it or not — then Rocco reruns the numbers right away."
+    },
+    {
       q: 'Can I see the full tutorial again?',
       a: 'Yes — open Settings and tap "TUTORIAL" at the bottom, or tap it right here at the bottom of this FAQ.'
     },
@@ -87,4 +91,3 @@
   faqModal.addEventListener('click', (e)=>{
     if(e.target === faqModal) faqModal.classList.remove('show');
   });
-

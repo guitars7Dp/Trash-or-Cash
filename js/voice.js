@@ -301,30 +301,34 @@
         osc.start();
         osc.stop(audioCtx.currentTime + 0.08);
         await new Promise(resolve => setTimeout(resolve, 100));
+        // Fully release the audio route again right after waking it up,
+        // rather than just pausing it. A suspended (but still-open)
+        // AudioContext may still register to iOS as "this page has a
+        // claim on the audio session," which could be why another app's
+        // music was stopping instead of just briefly ducking, and not
+        // resuming on its own once the mic session ended -- resuming
+        // paused audio is the OS's call, not something this page can
+        // force directly, but closing our own session as completely as
+        // possible gives it the best chance to hand control back cleanly.
+        // close() can't be undone, so the reference is dropped too --
+        // the `if(!audioCtx)` check above builds a fresh one next tap.
+        try{ await audioCtx.close(); }catch(e){}
+        audioCtx = null;
       }catch(e){
         // If this fails, proceed anyway — no worse off than before this existed.
       }
     }
 
     micBtn.addEventListener('click', async ()=>{
-      // Tap-to-stop: a second tap while a session is active (or still
-      // spinning up) cancels it instead of being ignored. Whatever stage
-      // it's at, resetMicButton() below flips the UI back immediately;
-      // the two "user backed out" checks further down (searching this
-      // file for "backed out") independently stop the in-flight tap-1
-      // async chain from ever calling recognition.start(). If a live
-      // recognition session already exists, .stop() (not .abort()) asks
-      // it to end the same clean way the silence timer already does —
-      // letting a final result flush instead of discarding whatever was
-      // just said — and its own onend handler clears its own timers.
-      if(listening){
-        const rec = activeRecognition;
-        resetMicButton();
-        if(rec){
-          try{ rec.stop(); }catch(e){}
-        }
-        return;
-      }
+      // A second tap while a session is active (or still spinning up) is
+      // ignored rather than treated as "stop". This used to support
+      // tap-to-stop instead, but that version left the mic unable to hear
+      // anything on the first tap after the app returned from being
+      // backgrounded -- see claude/mic-tap-to-stop-removed.md for the
+      // reasoning. Reverted back to this simpler, longer-tested behavior
+      // since reliably hearing you across multiple backgroundings matters
+      // more than tap-to-stop.
+      if(listening) return;
       listening = true;
       micBtn.classList.add('listening');
       micBtn.querySelector('.mic-label').textContent = 'STARTING…';
@@ -333,21 +337,21 @@
       // app is backgrounded — SpeechRecognition's own onaudiostart/onstart
       // can fire normally (the JS-level session believes it's running) while
       // no real audio ever reaches it, until our own hard-stop timer cuts it
-      // off with no result and no real error. A getUserMedia grab-and-release
-      // forces iOS to re-establish that route. This differs from an earlier,
-      // unsuccessful attempt at the same idea: that one ran proactively in a
-      // visibilitychange handler and could overlap with an already-live
-      // recognition session, fighting it for the mic. This instead runs
-      // exactly once, synchronously, right here at tap-time — fully
-      // requested AND released before a SpeechRecognition instance is ever
-      // created, so there's nothing for it to compete with.
-      
-            // Detect CarPlay as the active audio output. The mic probe below exists
-      // to fix a different bug (stale mic after backgrounding) and has been
-      // found to break recognition entirely when CarPlay owns the audio
-      // session — so it's skipped in that case rather than risking a hang or
-      // leaving the mic in a broken state.
-                  await primeAudioRoute();
+      // off with no result and no real error. primeAudioRoute() above forces
+      // iOS to re-establish that route by briefly waking an AudioContext
+      // (see that function for why a tone, not a getUserMedia grab, is what
+      // it actually does) right here at tap-time, before a SpeechRecognition
+      // instance is ever created, fully released again before start()
+      // below, so there's nothing for it to compete with.
+      //
+      // NOTE (found while fixing the "cuts off my music" issue this round):
+      // the two lines below this comment used to describe a CarPlay-specific
+      // skip for this priming step that isn't actually implemented anywhere
+      // in this file -- no such check exists. Left as an honest heads-up in
+      // case CarPlay behavior comes up again later, rather than silently
+      // deleting the note or inventing detection logic that's never been
+      // tested on a real device.
+      await primeAudioRoute();
       if(!listening) return; // user backed out (re-tapped) while awaiting above
 
 

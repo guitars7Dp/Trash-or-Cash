@@ -220,6 +220,28 @@
     img.src = pose.src;
   })));
 
+  // Same reasoning as roccoPosesReady above, but for a font instead of an
+  // image: Anton (see the type-system comment in styles.css) is used
+  // NOWHERE else in the app -- its only appearance anywhere is the big
+  // CASH/TRASH verdict word, which the tutorial doesn't reveal until the
+  // "TRASH or CASH" step, several steps in. Browsers don't actually fetch
+  // an @font-face file until something on screen needs to render text in
+  // it, so without this, Anton's download doesn't even START until that
+  // step first shows the word -- and since the stylesheet's Google Fonts
+  // @import uses font-display:swap, the word visibly renders in a
+  // fallback font first and then reflows/resizes once Anton finishes
+  // arriving. That's very likely the "font fighting itself" jump on that
+  // step. document.fonts.load() proactively forces the fetch to start
+  // immediately, at the exact size the verdict word actually uses, so by
+  // the time the tutorial reaches that step it's already settled --
+  // same as the pose images, just for text instead of an image.
+  const criticalFontsReady = (function(){
+    try{
+      if(document.fonts && document.fonts.load) return document.fonts.load('46px Anton').catch(()=>{});
+    }catch(e){}
+    return Promise.resolve();
+  })();
+
   // Places #tutRocco against #tutBar or #tutShelf per the pose's anchor.
   // Both fixtures are real elements inside the card, so their rects are
   // just measured directly — no target geometry, no viewport-dependent
@@ -833,17 +855,20 @@
       }
     }
 
-    // Wait on fonts AND every pose image before the first visible render
-    // — same reasoning as the fonts wait alone used to have: whichever
+    // Wait on fonts AND every pose image AND Anton specifically (see
+    // criticalFontsReady above -- document.fonts.ready alone doesn't
+    // cover a face nothing on screen has needed yet) before the first
+    // visible render — same reasoning the fonts wait always had: whichever
     // is slower, it's better spent before the overlay ever appears than
-    // causing a jump after it's already shown. In the common case both
-    // resolve almost immediately (fonts already loaded, poses already
-    // cached from a previous run) so this adds no visible delay.
+    // causing a jump after it's already shown. In the common case all
+    // three resolve almost immediately (fonts and Anton already loaded,
+    // poses already cached from a previous run) so this adds no visible
+    // delay.
     const fontsReady = (function(){
       try{ return (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve(); }
       catch(e){ return Promise.resolve(); }
     })();
-    Promise.all([fontsReady, roccoPosesReady]).then(()=>{ if(active) renderStep(); });
+    Promise.all([fontsReady, roccoPosesReady, criticalFontsReady]).then(()=>{ if(active) renderStep(); });
   }
 
   // Closes the tutorial overlay. `markSeen` records toc_tutorial_seen so

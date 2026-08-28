@@ -265,7 +265,6 @@
   } else {
     let listening = false;
     let activeRecognition = null;
-    let isFirstMicUse = true; // first tap per page load needs a touch more settle time
 
     function resetMicButtonState(){
       listening = false;
@@ -314,6 +313,19 @@
         // the `if(!audioCtx)` check above builds a fresh one next tap.
         try{ await audioCtx.close(); }catch(e){}
         audioCtx = null;
+        // close() resolving only means the JS-level teardown finished --
+        // not that iOS has actually finished releasing the underlying
+        // hardware audio session yet. That gap (JS promise settled vs.
+        // real hardware ready) is exactly the same category of stale-route
+        // problem this whole function exists to work around in the first
+        // place (see the file-level notes on onaudiostart vs onstart).
+        // Every mic tap now runs a real create-use-close AudioContext
+        // cycle right here, not just the first one per page load, so every
+        // tap needs a beat for that release to actually finish before
+        // SpeechRecognition is allowed to claim a brand new session --
+        // skipping this was the likely cause of the mic silently failing
+        // to hear anything past the very first tap of a session.
+        await new Promise(resolve => setTimeout(resolve, 150));
       }catch(e){
         // If this fails, proceed anyway — no worse off than before this existed.
       }
@@ -464,16 +476,15 @@
       // Small settle delay after the handshake, before actually starting
       // recognition. On iOS the mic hardware can need a brief beat to
       // catch up even after the handshake resolves, and the "Listening"
-      // label can flip on before real audio is actually flowing. Kept as
-      // short as possible (150ms) so it's not noticeable, while still
-      // giving the engine a moment to be ready before we trust it. The
-      // very first tap per page load gets a slightly longer settle (300ms)
-      // since everything (handshake, engine, audio session) is spinning up
-      // cold for the first time and has been observed to clip the very
-      // start of speech otherwise; every tap after that uses the shorter,
-      // near-imperceptible delay.
-      const settleDelay = isFirstMicUse ? 300 : 150;
-      isFirstMicUse = false;
+      // label can flip on before real audio is actually flowing. This used
+      // to be shorter for every tap after the first, on the assumption
+      // only the very first tap per page load was a "cold start." That's
+      // no longer true: primeAudioRoute() above now does a real
+      // create-use-close AudioContext cycle (plus its own settle wait)
+      // before every single tap, not just the first, so every tap is
+      // effectively a cold start for the audio session and gets the full
+      // 300ms here too.
+      const settleDelay = 300;
       setTimeout(()=>{
         if(!listening) return; // user backed out during this brief wait
         try{ recognition.start(); }

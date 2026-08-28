@@ -9,6 +9,23 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Trash or Cash">
 <link rel="stylesheet" href="css/styles.css">
+<script>
+  // Sets data-theme on <html> from the saved choice (or 'light', matching
+  // theme.js's own default) before the body ever paints -- this is what
+  // stops the flash of the wrong theme on load. It has to run this early,
+  // synchronously, in <head>, reading the exact same localStorage key
+  // theme.js reads later ('toc_theme'). theme.js still runs as normal
+  // near the end of <body> and re-applies the full color set as inline
+  // custom properties (see its own comments for why) -- this script only
+  // buys the CSS attribute-selector blocks in styles.css a correct first
+  // frame, it doesn't replace theme.js.
+  (function(){
+    try{
+      var t = localStorage.getItem('toc_theme') || 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    }catch(e){}
+  })();
+</script>
 </head>
 <body>
 <div id="flashScreen"><img class="flash-bg" src="images/flash-bg.webp" alt=""><img class="flash-fg" src="images/flash-fg.webp" alt="Rocco's Trash or Cash"></div>

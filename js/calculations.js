@@ -195,12 +195,12 @@
     // can log this exact result without recalculating, and reset so that
     // prompt shows fresh yes/no buttons again for the new result.
     lastResult = { r, isCash, platform: document.querySelector('.tab.active').dataset.tab };
-    // Persists this same result to localStorage (see recall.js) so the
-    // Recall button can show it even after the fields it came from get
-    // overwritten by a newer order on the same tab, or the app is closed
-    // and reopened. Purely additive -- runCheck()'s own behavior above is
-    // unchanged either way.
-    saveLastRecall({ ts: Date.now(), platform: lastResult.platform, isCash, offer: r.offer, net: r.net, gross: r.gross, fuel: r.fuel, hrs: r.hrs, logged: false });
+    // Snapshots this platform's field values to localStorage (see
+    // recall.js) so the Recall button can refill them later even after
+    // they get overwritten by a newer order on the same tab, cleared, or
+    // the app is closed and reopened. Purely additive -- runCheck()'s own
+    // behavior above is unchanged either way.
+    saveLastRecall(lastResult.platform);
     resetTracklogPrompt();
   }
 

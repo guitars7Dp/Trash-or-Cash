@@ -15,32 +15,23 @@
      which is what washed out the fine print/numbers. Pinning those to
      700 restores the same effective darkness. */
   @import url('https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
-  /* ---------- Design tokens (dark theme = default) ----------
+  /* ---------- Design tokens (light theme = default) ----------
      Every color in the app is a var(--x) reference to one of these. This
      block is the source of truth for CSS; the THEMES object in the main
      <script> below mirrors these same values so the JS-driven theme
      toggle can apply them as inline custom properties (see the comment on
-     the light-theme block just below for why it works that way). Keep
-     both in sync by hand if a color ever changes here. */
+     the dark-theme block just below for why it works that way). Keep
+     both in sync by hand if a color ever changes here.
+     This block used to hold the DARK values with light as the override —
+     flipped so the CSS default now matches theme.js's own default
+     ('light', see loadTheme()) and the early inline <script> in
+     index.html's <head> (which sets data-theme before first paint, off
+     the same localStorage key, so returning users on dark never see a
+     flash of these light colors first either). Before this, a fresh page
+     load painted dark for a beat every single time — regardless of the
+     saved theme — until theme.js ran late (near the end of <body>) and
+     corrected it. */
   :root{
-    --bg: #131313;
-    --panel: #1C1C1C;
-    --panel-2: #232323;
-    --line: #383838;
-    --line-bright: #4a4a4a;
-    --text: #F4F1EA;
-    --muted: #9C9C94;
-    --cash: #3ECF6E;
-    --cash-dim: #163821;
-    --trash: #FF5A36;
-    --trash-dim: #3D1D14;
-    --caution: #FFD23F;
-    --wordmark-outline: #201812;
-  }
-  /* Light theme values below are kept as a CSS-level fallback; the JS theme
-     toggle applies these same colors directly as inline custom properties,
-     which takes precedence and is what actually drives the live toggle. */
-  html[data-theme="light"]{
     --bg: #F5F2E9;
     --panel: #FFFFFF;
     --panel-2: #ECE7D8;
@@ -54,6 +45,29 @@
     --trash-dim: #FCE2D6;
     --caution: #B8790A;
     --wordmark-outline: #0A0705;
+  }
+  /* Dark theme values below are kept as a CSS-level fallback; the JS theme
+     toggle applies these same colors directly as inline custom properties,
+     which takes precedence and is what actually drives the live toggle.
+     The early inline <script> in index.html's <head> also sets
+     data-theme="dark" directly (before body paint) whenever that's the
+     saved choice, so this attribute-selector block is what actually
+     paints correctly on a dark user's very first frame, before theme.js
+     itself has even run. */
+  html[data-theme="dark"]{
+    --bg: #131313;
+    --panel: #1C1C1C;
+    --panel-2: #232323;
+    --line: #383838;
+    --line-bright: #4a4a4a;
+    --text: #F4F1EA;
+    --muted: #9C9C94;
+    --cash: #3ECF6E;
+    --cash-dim: #163821;
+    --trash: #FF5A36;
+    --trash-dim: #3D1D14;
+    --caution: #FFD23F;
+    --wordmark-outline: #201812;
   }
   /* ---------- Base reset & page shell ---------- */
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -272,7 +286,13 @@
     background:#2A2724;
   }
   .waiting-note.hidden{ display:none; }
-  .waiting-note img.waiting-img{ width:160px; height:auto; margin-bottom:8px; }
+  /* Widened per request. object-fit:fill (the default, stated explicitly
+     here) stretches the image to exactly fill this box rather than
+     cropping it -- the native asset is 480x320 (1.5:1), this box is
+     220x120 (1.83:1), so the picture stretches about 22% wider relative
+     to its height. Nothing is cut off; width grows a lot, height only a
+     little (120px vs. the original 160-wide version's ~107px). */
+  .waiting-note img.waiting-img{ width:220px; height:120px; object-fit:fill; margin-bottom:8px; }
   .waiting-img-dark{ display:none; }
   html:not([data-theme="light"]) .waiting-img-light{ display:none; }
   html:not([data-theme="light"]) .waiting-img-dark{ display:inline-block; }
@@ -389,7 +409,19 @@
   .modal .modal-sub span{ flex:1; }
   .modal .field-group{ margin-bottom:16px; }
   .slider-row{ display:flex; align-items:center; gap:12px; }
-  .slider-row input[type=range]{ flex:1; accent-color:var(--caution); }
+  /* touch-action:none stops iOS from treating a held-down finger on the
+     track as a text-selection / callout gesture (the "highlight" Derek
+     saw on a too-long press) — the browser no longer waits to see if this
+     is a selection before committing to a drag, so the slider ONLY slides
+     and nothing else responds to a touch here. user-select/-webkit-touch-
+     callout are the belt-and-suspenders version of the same intent for
+     browsers that still try a callout despite touch-action. */
+  .slider-row input[type=range]{
+    flex:1; accent-color:var(--caution);
+    touch-action:none;
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+  }
   .slider-value{ font-family:'Space Mono',monospace; font-weight:700; font-size:16px; min-width:52px; text-align:right; }
   .modal-save{
     width:100%; padding:16px; border-radius:12px; border:none;

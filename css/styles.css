@@ -460,28 +460,6 @@
     transform:translateY(2px);
   }
   .modal-secondary-btn svg{ width:15px; height:15px; flex-shrink:0; }
-  /* ---------- Recall ---------- */
-  .recall-card{
-    background:var(--panel); border:1.5px solid var(--line-bright); border-radius:14px;
-    padding:14px 16px; margin-bottom:6px;
-  }
-  .recall-card-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
-  .recall-platform{
-    font-family:'Space Mono',monospace; font-weight:700; font-size:11px;
-    letter-spacing:0.05em; text-transform:uppercase; color:var(--muted);
-  }
-  .recall-verdict{ font-family:'Oswald',sans-serif; font-weight:600; font-size:14px; letter-spacing:0.02em; }
-  .recall-verdict.cash{ color:var(--cash); }
-  .recall-verdict.trash{ color:var(--trash); }
-  .recall-card-stats{ font-family:'Space Mono',monospace; font-weight:700; font-size:15px; margin-bottom:2px; }
-  .recall-card-time{ font-size:11.5px; color:var(--muted); margin-bottom:10px; }
-  .recall-card .tracklog-btn{ width:100%; }
-  .recall-section-label{
-    font-family:'Space Mono',monospace; font-weight:700; font-size:11px; letter-spacing:0.05em;
-    text-transform:uppercase; color:var(--muted); margin:18px 0 6px;
-  }
-  .radar-row{ cursor:pointer; }
-  .radar-row:active{ opacity:0.7; }
   /* ---------- FAQ modal ---------- */
   .modal-close{
     position:absolute; top:14px; right:14px; width:32px; height:32px; border-radius:9px;

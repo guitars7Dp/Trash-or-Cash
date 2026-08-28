@@ -336,20 +336,26 @@
     {
       target: '#calculateBtn',
       // CALCULATE isn't centered in its own row — it shares .action-row
-      // with the small square delete/trash button (.clear-row) sitting to
-      // its right, so the button's own visual center sits left of the
-      // row's (and the viewport's) center by roughly half of that trash
-      // button's width plus the gap between them (~27px, from the actual
-      // CSS: 10px gap + a ~44px-wide icon-only .clear-btn). Without this,
-      // the card centers on the viewport as usual, which no longer lines
-      // up under the button now that the button itself is off-center —
-      // this nudges the card left to match. Estimated from the CSS, not
-      // measured on a real device, so nudge this number if it's still a
-      // few pixels off once you see it live.
-      cardDx: -28,
+      // with the two small icon buttons in .clear-row (Recall, then
+      // Clear) sitting to its right, so the button's own visual center
+      // sits left of the row's (and the viewport's) center by roughly
+      // half of that .clear-row's width plus the gap between them.
+      // Recomputed when the Recall button was added to .clear-row
+      // (previously just the one Clear button): two ~44px-wide icon-only
+      // .clear-btn's plus the row's own 8px internal gap ≈ 96px, plus the
+      // 10px .action-row gap → (96+10)/2 ≈ 53. Estimated from the CSS,
+      // not measured on a real device, so nudge this number if it's still
+      // a few pixels off once you see it live.
+      cardDx: -53,
       rocco: { pose: 'pawup' },
       title: 'Calculate',
       text: "I calculate automatically the moment your required fields are filled — by typing, by voice, or a mix of both across a few mic taps. Tap CALCULATE if you just want to jump straight to the verdict."
+    },
+    {
+      target: '#recallBtn',
+      rocco: { pose: 'peekSide' },
+      title: 'Recall last order',
+      text: "Want to double-check a number, or pick up right where you left off? Tap this to instantly refill the tab with your most recently calculated order — on any platform — and I'll run it again right here."
     },
     {
       target: '#clearFieldsBtn',

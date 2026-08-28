@@ -335,18 +335,16 @@
     },
     {
       target: '#calculateBtn',
-      // CALCULATE isn't centered in its own row — it shares .action-row
+      // CALCULATE isn't centered in its own row -- it shares .action-row
       // with the two small icon buttons in .clear-row (Recall, then
       // Clear) sitting to its right, so the button's own visual center
-      // sits left of the row's (and the viewport's) center by roughly
-      // half of that .clear-row's width plus the gap between them.
-      // Recomputed when the Recall button was added to .clear-row
-      // (previously just the one Clear button): two ~44px-wide icon-only
-      // .clear-btn's plus the row's own 8px internal gap ≈ 96px, plus the
-      // 10px .action-row gap → (96+10)/2 ≈ 53. Estimated from the CSS,
-      // not measured on a real device, so nudge this number if it's still
-      // a few pixels off once you see it live.
-      cardDx: -53,
+      // sits left of the row's (and the viewport's) center. This used to
+      // carry a cardDx (first -28, then -53 once Recall widened
+      // .clear-row) to hug the card against the button's left edge, but
+      // with Recall in the row CALCULATE is narrower than it used to be,
+      // and centering the card here reads better and stays consistent
+      // with every other step -- the button still sits comfortably within
+      // the card's footprint even without the offset.
       rocco: { pose: 'pawup' },
       title: 'Calculate',
       text: "I calculate automatically the moment your required fields are filled — by typing, by voice, or a mix of both across a few mic taps. Tap CALCULATE if you just want to jump straight to the verdict."

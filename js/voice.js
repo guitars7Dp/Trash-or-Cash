@@ -1,4 +1,4 @@
-  // ---------- Voice entry ----------
+// ---------- Voice entry ----------
   // Word-to-number lookup tables for wordsToDigits() below.
   const ONES_WORDS = { zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9,
     ten:10, eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16, seventeen:17, eighteen:18, nineteen:19 };
@@ -260,6 +260,24 @@
 
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   const micBtn = document.getElementById('micBtn');
+  // TEMPORARY diagnostic readout for the return-mileage/last-word clipping
+  // investigation -- see claude/mic-return-mileage-diagnostic.md. Shows
+  // exactly what the recognizer heard, chunk by chunk, with timing, so the
+  // question "did it never hear 'return mileage' at all, or did it hear it
+  // but something else dropped it" has a real answer instead of a guess.
+  // Safe to delete this block (and the matching HTML/CSS) once resolved.
+  const voiceDebugEl = document.getElementById('voiceDebugLog');
+  let voiceDebugLines = [];
+  function voiceDebugLog(line){
+    voiceDebugLines.push(line);
+    // Raised from 8 -- Derek's report (heard "44 dollars," dropped "and 38
+    // cents") is exactly the case where the dropped piece could be
+    // anywhere in a longer utterance with several fields, not just at the
+    // end. 8 lines could scroll past an early drop before the tap even
+    // finished; this keeps the whole tap's history instead.
+    if(voiceDebugLines.length > 30) voiceDebugLines.shift();
+    if(voiceDebugEl) voiceDebugEl.textContent = voiceDebugLines.join('\n');
+  }
   if(!SpeechRec){
     micBtn.style.display = 'none';
   } else {
@@ -300,7 +318,18 @@
         gain.connect(audioCtx.destination);
         osc.start();
         osc.stop(audioCtx.currentTime + 0.08);
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // This wait is the one piece of latency in the whole tap-to-listen
+        // path that's new since last week's version (which used a plain
+        // getUserMedia grab/release here instead, with no deliberate pad
+        // tacked on after it) -- confirmed by diffing this file against
+        // last week's copy. It was 100ms; trimmed to 50ms here since that
+        // was pure dead time on top of the 80ms tone itself, not something
+        // tied to a measured need. Not removed entirely -- some settle gap
+        // after the tone is still probably worth keeping for the
+        // stale-route/CarPlay case this function exists for -- but this
+        // directly targets the extra startup delay behind the new
+        // first-word clipping, rather than touching anything else.
+        await new Promise(resolve => setTimeout(resolve, 50));
       }catch(e){
         // If this fails, proceed anyway — no worse off than before this existed.
       }
@@ -311,6 +340,9 @@
       listening = true;
       micBtn.classList.add('listening');
       micBtn.querySelector('.mic-label').textContent = 'STARTING…';
+      voiceDebugLines = []; // fresh log per tap -- see voiceDebugLog above
+      const tapStartedAt = Date.now();
+      voiceDebugLog('[+0ms] tap');
 
       // iOS can leave the underlying audio route to the mic stale after the
       // app is backgrounded — SpeechRecognition's own onaudiostart/onstart
@@ -384,10 +416,12 @@
       let silenceTimer = null;
       const deadMicTimer = setTimeout(()=>{
         if(!heardAnything){
+          voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] deadMicTimer -> abort()');
           try{ recognition.abort(); }catch(e){}
         }
       }, 8000);
       const hardCeiling = setTimeout(()=>{
+        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] hardCeiling -> stop()');
         try{ recognition.stop(); }catch(e){}
       }, 20000);
       function armSilenceTimer(){
@@ -398,12 +432,14 @@
         // minutes... 12 miles..."). Started at 3.5s, shortened after real
         // testing showed that felt like it lingered too long once done.
         silenceTimer = setTimeout(()=>{
+          voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] silenceTimer(1.8s) -> stop()');
           try{ recognition.stop(); }catch(e){}
         }, 1800);
       }
 
       recognition.onaudiostart = ()=>{
         micBtn.querySelector('.mic-label').textContent = 'LISTENING…';
+        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] audiostart');
       };
       // Some iOS versions never fire onaudiostart reliably — onstart is a
       // weaker signal (recognition session started, not necessarily audio
@@ -413,26 +449,38 @@
         if(micBtn.querySelector('.mic-label').textContent === 'STARTING…'){
           micBtn.querySelector('.mic-label').textContent = 'LISTENING…';
         }
+        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] start');
       };
       recognition.onresult = (e)=>{
         heardAnything = true;
         armSilenceTimer();
         const result = e.results[e.results.length - 1];
+        // Logs every result -- interim included -- not just the final one
+        // applyVoiceEntry() acts on. That's the point: if "return mileage"
+        // shows up in an interim chunk but never in a final one, that's a
+        // finalization problem, not an audio-capture problem, and this is
+        // the only way to actually tell the two apart. The flag marks any
+        // chunk mentioning return/mile so it's easy to spot at a glance.
+        const text = result[0].transcript;
+        const flag = /return|mile/i.test(text) ? ' ⚑' : '';
+        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] #' + e.results.length + ' ' + (result.isFinal ? 'FINAL' : 'interim') + ': "' + text + '"' + flag);
         if(result.isFinal){
-          applyVoiceEntry(result[0].transcript);
+          applyVoiceEntry(text);
         }
       };
       recognition.onerror = (e)=>{
-        // Not surfaced to the user (see onend below) — the underlying issue
-        // is a known Web Speech API limitation on iOS that can't be fixed
-        // short of a native app. Left logging to console only, in case
-        // that ever changes and this is worth revisiting.
+        // Not surfaced to the user beyond this debug log — the underlying
+        // issue is a known Web Speech API limitation on iOS that can't be
+        // fixed short of a native app. Still logged to console too, in
+        // case that ever changes and this is worth revisiting.
         console.log('SpeechRecognition error:', e.error);
+        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] ERROR: ' + e.error);
       };
       recognition.onend = ()=>{
         clearTimeout(deadMicTimer);
         clearTimeout(hardCeiling);
         clearTimeout(silenceTimer);
+        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] end');
         resetMicButton();
       };
       // Small settle delay after the handshake, before actually starting
@@ -512,4 +560,3 @@
 
   document.getElementById('clearFieldsBtn').addEventListener('click', clearActiveTabFields);
   document.getElementById('calculateBtn').addEventListener('click', calculateNow);
-

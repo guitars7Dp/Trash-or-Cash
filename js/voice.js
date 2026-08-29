@@ -389,192 +389,252 @@
       // failures all showed the exact same fingerprint -- onstart AND
       // onaudiostart both fire (the JS-level session believes it's live),
       // but zero speech is ever recognized for the full 8s until
-      // deadMicTimer aborts it. That's the classic stale-mic-route symptom
-      // this file has documented since the original version, and the
-      // comment that used to sit here still described the ORIGINAL fix for
-      // it (a getUserMedia grab-and-release) even though that call got
-      // swapped out for primeAudioRoute() during an earlier round aimed at
-      // a different problem (CarPlay/other-app audio ducking) -- the
-      // comment and the code had drifted apart. The two aren't
-      // interchangeable: getUserMedia({audio:true}) specifically wakes the
-      // MIC INPUT route (what SpeechRecognition itself needs), while
-      // primeAudioRoute()'s tone only exercises audio OUTPUT/playback
-      // routing -- a different half of the audio session. Swapping instead
-      // of keeping both likely dropped the fix for this exact bug. Restored
-      // the getUserMedia probe here, ahead of primeAudioRoute(), so both
-      // routes get woken -- mic input for this bug, output for the
-      // CarPlay/ducking one primeAudioRoute was added for.
-      try{
-        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
-        stream.getTracks().forEach(t => t.stop());
-        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] getUserMedia probe ok');
-      }catch(e){
-        // Don't block voice entry if this fails for any reason -- proceed
-        // to primeAudioRoute() and recognition.start() regardless, same
-        // fallback posture as the rest of this file.
-        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] getUserMedia probe failed: ' + (e && e.name || e));
-      }
-      if(!listening) return; // user backed out (re-tapped) while awaiting above
-      await primeAudioRoute();
-      if(!listening) return; // user backed out (re-tapped) while awaiting above
-
-
-
-
-      const recognition = new SpeechRec(); // fresh instance every tap, on purpose
-      recognition.lang = 'en-US';
-      // interimResults is permanently on — not diagnostic scaffolding.
-      // Every partial "still speaking" result, not just the final one,
-      // feeds armSilenceTimer() below, which is how the app knows you're
-      // still mid-sentence across natural pauses between fields ("45
-      // minutes... 12 miles... 25 dollars"). Turning this off would break
-      // that listen-through-pauses behavior.
-      recognition.interimResults = true;
-      recognition.maxAlternatives = 1;
-      // Rattling off several fields in one go naturally has small pauses
-      // between numbers ("45 minutes... 12 miles... 25 dollars"). Without
-      // this, the engine can treat the first pause as "done" and stop
-      // listening before the rest is spoken. With it on, it keeps
-      // listening through those pauses; our own silence timer below (not
-      // the browser's) decides when the user is actually finished.
-      recognition.continuous = true;
-      activeRecognition = recognition;
-      let heardAnything = false;
-      // On iOS — especially a home-screen standalone web app, which spins up
-      // its audio engine slower than a normal Safari tab — there's a real
-      // gap between calling start() and the mic actually capturing audio.
-      // Telling the user to speak immediately risks the first (or only)
-      // words being spoken before the engine catches up, with nothing
-      // captured and no error to show for it. So the label starts at
-      // STARTING… and only flips to LISTENING… once the engine itself
-      // confirms it has begun (onaudiostart if available, falling back to
-      // onstart), which is the actual cue to start talking.
-
-      // Three timers, each with a distinct job, so timing adapts to
-      // however fast or slow someone talks instead of guessing one fixed
-      // duration for everyone:
+      // deadMicTimer aborts it. Restoring a getUserMedia mic-input probe
+      // (see the comment below) did NOT fix this -- confirmed by a later
+      // debug log showing "getUserMedia probe ok" immediately followed by
+      // the exact same dead-audio fingerprint. That rules out the raw mic
+      // hardware route as the cause; it's more likely the recognition
+      // SERVICE session itself (Apple's dictation backend) going stale
+      // after backgrounding, not the microphone hardware, which a JS-level
+      // "wake the mic" probe was never going to fix. Since there's no known
+      // fix for that layer, this instead shrinks the COST of it: a new
+      // quick-dead-check (see armQuickDeadCheck below) detects the same
+      // fingerprint in ~3.5s instead of the full 8s, and automatically
+      // retries once with a completely fresh probe+session before making
+      // the person notice it's dead and re-tap themselves. If the retry
+      // also fails, it falls through to the normal 8s/20s timers and
+      // visible dead-end exactly as before -- this is a mitigation for the
+      // symptom, not a fix for whatever's actually stale on Apple's side.
       //
-      // 1) deadMicTimer — if NOTHING has been heard at all (not even a
-      //    partial word) within 8s of starting, that's the dead/stale mic
-      //    connection scenario from before backgrounding fixes — abort
-      //    with an error, since something is genuinely wrong.
-      // 2) silenceTimer — reset every time any speech comes in (interim
-      //    or final). Only fires after a real pause with no new speech,
-      //    meaning the person is actually done talking. Ends cleanly
-      //    (stop, not abort) — this is the normal, expected end of a
-      //    successful entry, not a failure.
-      // 3) hardCeiling — an absolute cap that can't be reset by anything,
-      //    so a session can never sit open indefinitely and duck
-      //    background audio while driving, no matter what else happens.
-      let silenceTimer = null;
-      const deadMicTimer = setTimeout(()=>{
-        if(!heardAnything){
-          voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] deadMicTimer -> abort()');
-          try{ recognition.abort(); }catch(e){}
+      // getUserMedia({audio:true}) grab-and-release still runs ahead of
+      // primeAudioRoute() on every attempt -- kept even though it didn't
+      // solve this particular bug, since it's still the right, purpose-
+      // built wake for the mic INPUT route (distinct from primeAudioRoute's
+      // audio OUTPUT/CarPlay-routing tone) and may still matter for
+      // whatever original case it was written for.
+      async function primeMicRoutes(label){
+        try{
+          const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+          stream.getTracks().forEach(t => t.stop());
+          voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (' + label + ') getUserMedia probe ok');
+        }catch(e){
+          // Don't block voice entry if this fails for any reason -- proceed
+          // to primeAudioRoute() and recognition.start() regardless, same
+          // fallback posture as the rest of this file.
+          voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (' + label + ') getUserMedia probe failed: ' + (e && e.name || e));
         }
-      }, 8000);
-      const hardCeiling = setTimeout(()=>{
-        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] hardCeiling -> stop()');
-        try{ recognition.stop(); }catch(e){}
-      }, 20000);
-      // Adaptive instead of one fixed number for everyone: 1.8s once it
-      // looks like everything the active tab requires has already been
-      // said (via looksLikelyComplete above) -- snappy for someone who
-      // talks fast/cleanly and never needed the longer tolerance -- or 3s
-      // while something required is still evidently missing, which is the
-      // exact real-measured case (see the mic-return-mileage-diagnostic.md
-      // note) where a natural pause before the last field got cut off at
-      // 1.8s. Called fresh on every onresult below with the current
-      // completeness read, so the wait in effect can change mid-utterance
-      // as more gets recognized -- e.g. starts at 3s while time/miles are
-      // still coming in, drops to 1.8s the moment the offer amount is
-      // finally heard too.
-      function armSilenceTimer(likelyComplete){
-        clearTimeout(silenceTimer);
-        const wait = likelyComplete ? 1800 : 3000;
-        silenceTimer = setTimeout(()=>{
-          voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] silenceTimer(' + (wait/1000) + 's, ' + (likelyComplete ? 'looked complete' : 'still incomplete') + ') -> stop()');
-          try{ recognition.stop(); }catch(e){}
-        }, wait);
+        if(!listening) return false; // user backed out (re-tapped, or backgrounding kill-switch) while awaiting above
+        await primeAudioRoute();
+        if(!listening) return false;
+        return true;
       }
 
-      recognition.onaudiostart = ()=>{
-        micBtn.querySelector('.mic-label').textContent = 'LISTENING…';
-        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] audiostart');
-      };
-      // Some iOS versions never fire onaudiostart reliably — onstart is a
-      // weaker signal (recognition session started, not necessarily audio
-      // flowing yet) but still an improvement over flipping the label
-      // instantly at tap-time, so it's used as a fallback only.
-      recognition.onstart = ()=>{
-        if(micBtn.querySelector('.mic-label').textContent === 'STARTING…'){
+      // One full listen attempt: create a fresh recognition instance, wire
+      // it up, settle-delay, start(). Factored out (rather than inlined
+      // once in the click handler, as this always used to be) specifically
+      // so the quick-dead-check below can call it a second time for the
+      // one-time automatic retry, without duplicating this whole block.
+      // attemptNum is 1 for the original tap, 2 for the retry -- only
+      // attempt 1 ever arms the quick-dead-check, so a retry that also
+      // fails falls through to the plain 8s/20s timers instead of looping.
+      function startAttempt(attemptNum){
+        const recognition = new SpeechRec(); // fresh instance every attempt, on purpose
+        recognition.lang = 'en-US';
+        // interimResults is permanently on — not diagnostic scaffolding.
+        // Every partial "still speaking" result, not just the final one,
+        // feeds armSilenceTimer() below, which is how the app knows you're
+        // still mid-sentence across natural pauses between fields ("45
+        // minutes... 12 miles... 25 dollars"). Turning this off would break
+        // that listen-through-pauses behavior.
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+        // Rattling off several fields in one go naturally has small pauses
+        // between numbers ("45 minutes... 12 miles... 25 dollars"). Without
+        // this, the engine can treat the first pause as "done" and stop
+        // listening before the rest is spoken. With it on, it keeps
+        // listening through those pauses; our own silence timer below (not
+        // the browser's) decides when the user is actually finished.
+        recognition.continuous = true;
+        activeRecognition = recognition;
+        let heardAnything = false;
+        let handingOffToRetry = false; // true only during the deliberate internal abort()->attempt 2 hand-off
+
+        // Three timers, each with a distinct job, so timing adapts to
+        // however fast or slow someone talks instead of guessing one fixed
+        // duration for everyone:
+        //
+        // 1) deadMicTimer — if NOTHING has been heard at all (not even a
+        //    partial word) within 8s of starting, that's the dead/stale mic
+        //    connection scenario from before backgrounding fixes — abort
+        //    with an error, since something is genuinely wrong. Backstop
+        //    for attempt 2 (or if quickDeadCheck itself somehow doesn't
+        //    fire on attempt 1).
+        // 2) silenceTimer — reset every time any speech comes in (interim
+        //    or final). Only fires after a real pause with no new speech,
+        //    meaning the person is actually done talking. Ends cleanly
+        //    (stop, not abort) — this is the normal, expected end of a
+        //    successful entry, not a failure.
+        // 3) hardCeiling — an absolute cap that can't be reset by anything,
+        //    so a session can never sit open indefinitely and duck
+        //    background audio while driving, no matter what else happens.
+        let silenceTimer = null;
+        const deadMicTimer = setTimeout(()=>{
+          if(!heardAnything){
+            voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (attempt ' + attemptNum + ') deadMicTimer -> abort()');
+            try{ recognition.abort(); }catch(e){}
+          }
+        }, 8000);
+        const hardCeiling = setTimeout(()=>{
+          voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (attempt ' + attemptNum + ') hardCeiling -> stop()');
+          try{ recognition.stop(); }catch(e){}
+        }, 20000);
+
+        // NEW: catches the exact stale-route fingerprint (audio start
+        // fires, nothing ever heard) much sooner than deadMicTimer's 8s --
+        // armed relative to audiostart/start, not tap-time, so it doesn't
+        // punish the normal ~1-1.5s gap before someone actually starts
+        // talking (see the working reference log in
+        // mic-return-mileage-diagnostic.md). Only attempt 1 arms this --
+        // see the file-level note above for why a retry that also goes
+        // quiet just falls through to the normal timers instead of looping
+        // forever.
+        let quickDeadCheck = null;
+        function armQuickDeadCheck(){
+          if(attemptNum !== 1) return;
+          clearTimeout(quickDeadCheck);
+          quickDeadCheck = setTimeout(()=>{
+            if(!heardAnything){
+              voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (attempt 1) quickDeadCheck(3.5s post-start) -> auto-retry');
+              handingOffToRetry = true;
+              clearTimeout(deadMicTimer); clearTimeout(hardCeiling); clearTimeout(silenceTimer);
+              try{ recognition.abort(); }catch(e){}
+              micBtn.querySelector('.mic-label').textContent = 'RETRYING…';
+              primeMicRoutes('retry').then(ok=>{
+                if(!ok || !listening) return; // backed out, or backgrounded again, during the retry's own probe
+                startAttempt(2);
+              });
+            }
+          }, 3500);
+        }
+
+        // Adaptive instead of one fixed number for everyone: 1.8s once it
+        // looks like everything the active tab requires has already been
+        // said (via looksLikelyComplete above) -- snappy for someone who
+        // talks fast/cleanly and never needed the longer tolerance -- or 3s
+        // while something required is still evidently missing, which is the
+        // exact real-measured case (see the mic-return-mileage-diagnostic.md
+        // note) where a natural pause before the last field got cut off at
+        // 1.8s. Called fresh on every onresult below with the current
+        // completeness read, so the wait in effect can change mid-utterance
+        // as more gets recognized -- e.g. starts at 3s while time/miles are
+        // still coming in, drops to 1.8s the moment the offer amount is
+        // finally heard too.
+        function armSilenceTimer(likelyComplete){
+          clearTimeout(silenceTimer);
+          const wait = likelyComplete ? 1800 : 3000;
+          silenceTimer = setTimeout(()=>{
+            voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (attempt ' + attemptNum + ') silenceTimer(' + (wait/1000) + 's, ' + (likelyComplete ? 'looked complete' : 'still incomplete') + ') -> stop()');
+            try{ recognition.stop(); }catch(e){}
+          }, wait);
+        }
+
+        recognition.onaudiostart = ()=>{
           micBtn.querySelector('.mic-label').textContent = 'LISTENING…';
-        }
-        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] start');
-      };
-      recognition.onresult = (e)=>{
-        heardAnything = true;
-        const result = e.results[e.results.length - 1];
-        // Completeness is checked against everything heard so far this
-        // session, not just the latest chunk -- concatenating every entry
-        // in e.results rather than assuming iOS always keeps one
-        // continuous utterance under a single result index. Falls back to
-        // "still incomplete" (the safe/patient default) if the active tab
-        // can't be read for any reason.
-        let fullSoFar = '';
-        for(let i=0; i<e.results.length; i++){ fullSoFar += ' ' + e.results[i][0].transcript; }
-        const activeTabEl = document.querySelector('.tab.active');
-        const complete = activeTabEl ? looksLikelyComplete(activeTabEl.dataset.tab, fullSoFar) : false;
-        armSilenceTimer(complete);
-        // Logs every result -- interim included -- not just the final one
-        // applyVoiceEntry() acts on. That's the point: if "return mileage"
-        // shows up in an interim chunk but never in a final one, that's a
-        // finalization problem, not an audio-capture problem, and this is
-        // the only way to actually tell the two apart. The flag marks any
-        // chunk mentioning return/mile so it's easy to spot at a glance;
-        // the (complete)/(incomplete) tag shows which wait the NEXT pause
-        // will actually get, so a too-short or too-long wait can be read
-        // straight off this log instead of inferred.
-        const text = result[0].transcript;
-        const flag = /return|mile/i.test(text) ? ' ⚑' : '';
-        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] #' + e.results.length + ' ' + (result.isFinal ? 'FINAL' : 'interim') + ': "' + text + '"' + flag + ' (' + (complete ? 'complete' : 'incomplete') + ')');
-        if(result.isFinal){
-          applyVoiceEntry(text);
-        }
-      };
-      recognition.onerror = (e)=>{
-        // Not surfaced to the user beyond this debug log — the underlying
-        // issue is a known Web Speech API limitation on iOS that can't be
-        // fixed short of a native app. Still logged to console too, in
-        // case that ever changes and this is worth revisiting.
-        console.log('SpeechRecognition error:', e.error);
-        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] ERROR: ' + e.error);
-      };
-      recognition.onend = ()=>{
-        clearTimeout(deadMicTimer);
-        clearTimeout(hardCeiling);
-        clearTimeout(silenceTimer);
-        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] end');
-        resetMicButton();
-      };
-      // Small settle delay after the handshake, before actually starting
-      // recognition. On iOS the mic hardware can need a brief beat to
-      // catch up even after the handshake resolves, and the "Listening"
-      // label can flip on before real audio is actually flowing. Kept as
-      // short as possible (150ms) so it's not noticeable, while still
-      // giving the engine a moment to be ready before we trust it. The
-      // very first tap per page load gets a slightly longer settle (300ms)
-      // since everything (handshake, engine, audio session) is spinning up
-      // cold for the first time and has been observed to clip the very
-      // start of speech otherwise; every tap after that uses the shorter,
-      // near-imperceptible delay.
-      const settleDelay = isFirstMicUse ? 300 : 150;
-      isFirstMicUse = false;
-      setTimeout(()=>{
-        if(!listening) return; // user backed out during this brief wait
-        try{ recognition.start(); }
-        catch(e){ resetMicButton(); }
-      }, settleDelay);
+          voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (attempt ' + attemptNum + ') audiostart');
+          armQuickDeadCheck();
+        };
+        // Some iOS versions never fire onaudiostart reliably — onstart is a
+        // weaker signal (recognition session started, not necessarily audio
+        // flowing yet) but still an improvement over flipping the label
+        // instantly at tap-time, so it's used as a fallback only.
+        recognition.onstart = ()=>{
+          if(micBtn.querySelector('.mic-label').textContent === 'STARTING…'){
+            micBtn.querySelector('.mic-label').textContent = 'LISTENING…';
+          }
+          voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (attempt ' + attemptNum + ') start');
+          armQuickDeadCheck(); // harmless if onaudiostart also fires -- just re-arms from whichever came later
+        };
+        recognition.onresult = (e)=>{
+          heardAnything = true;
+          clearTimeout(quickDeadCheck); // real speech came in -- the stale-route check no longer applies
+          const result = e.results[e.results.length - 1];
+          // Completeness is checked against everything heard so far this
+          // session, not just the latest chunk -- concatenating every entry
+          // in e.results rather than assuming iOS always keeps one
+          // continuous utterance under a single result index. Falls back to
+          // "still incomplete" (the safe/patient default) if the active tab
+          // can't be read for any reason.
+          let fullSoFar = '';
+          for(let i=0; i<e.results.length; i++){ fullSoFar += ' ' + e.results[i][0].transcript; }
+          const activeTabEl = document.querySelector('.tab.active');
+          const complete = activeTabEl ? looksLikelyComplete(activeTabEl.dataset.tab, fullSoFar) : false;
+          armSilenceTimer(complete);
+          // Logs every result -- interim included -- not just the final one
+          // applyVoiceEntry() acts on. That's the point: if "return mileage"
+          // shows up in an interim chunk but never in a final one, that's a
+          // finalization problem, not an audio-capture problem, and this is
+          // the only way to actually tell the two apart. The flag marks any
+          // chunk mentioning return/mile so it's easy to spot at a glance;
+          // the (complete)/(incomplete) tag shows which wait the NEXT pause
+          // will actually get, so a too-short or too-long wait can be read
+          // straight off this log instead of inferred.
+          const text = result[0].transcript;
+          const flag = /return|mile/i.test(text) ? ' ⚑' : '';
+          voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (attempt ' + attemptNum + ') #' + e.results.length + ' ' + (result.isFinal ? 'FINAL' : 'interim') + ': "' + text + '"' + flag + ' (' + (complete ? 'complete' : 'incomplete') + ')');
+          if(result.isFinal){
+            applyVoiceEntry(text);
+          }
+        };
+        recognition.onerror = (e)=>{
+          // Not surfaced to the user beyond this debug log — the underlying
+          // issue is a known Web Speech API limitation on iOS that can't be
+          // fixed short of a native app. Still logged to console too, in
+          // case that ever changes and this is worth revisiting.
+          console.log('SpeechRecognition error:', e.error);
+          voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (attempt ' + attemptNum + ') ERROR: ' + e.error);
+        };
+        recognition.onend = ()=>{
+          clearTimeout(deadMicTimer);
+          clearTimeout(hardCeiling);
+          clearTimeout(silenceTimer);
+          clearTimeout(quickDeadCheck);
+          voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (attempt ' + attemptNum + ') end');
+          // Swallow this quietly during a deliberate internal hand-off to
+          // the retry -- resetting listening/the button here would break
+          // the retry's own "if(!listening) return" guards and make it
+          // silently no-op. The retry's own eventual onend (or the normal
+          // no-retry path) is what actually resets the UI.
+          if(handingOffToRetry) return;
+          // Only reset shared button/state if this recognition is still the
+          // current one. Without this guard, a stale session's onend (firing
+          // asynchronously after a tap-to-stop .stop() call above) could fire
+          // AFTER a fast re-tap has already started a brand-new session, and
+          // would wipe out that new session's state out from under it.
+          if(activeRecognition === recognition) resetMicButton();
+        };
+        // Small settle delay after the handshake, before actually starting
+        // recognition. On iOS the mic hardware can need a brief beat to
+        // catch up even after the handshake resolves, and the "Listening"
+        // label can flip on before real audio is actually flowing. Kept as
+        // short as possible (150ms) so it's not noticeable, while still
+        // giving the engine a moment to be ready before we trust it. The
+        // very first tap per page load gets a slightly longer settle (300ms)
+        // since everything (handshake, engine, audio session) is spinning up
+        // cold for the first time and has been observed to clip the very
+        // start of speech otherwise; every tap after that uses the shorter,
+        // near-imperceptible delay.
+        const settleDelay = isFirstMicUse ? 300 : 150;
+        isFirstMicUse = false;
+        setTimeout(()=>{
+          if(!listening) return; // user backed out during this brief wait
+          try{ recognition.start(); }
+          catch(e){ resetMicButton(); }
+        }, settleDelay);
+      }
+
+      const probesOk = await primeMicRoutes('initial');
+      if(!probesOk) return;
+      startAttempt(1);
     });
 
     // Extra safety net: if the tab/app gets backgrounded (e.g. switching

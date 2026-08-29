@@ -26,6 +26,47 @@
     return t;
   }
 
+  // Adaptive silence-timeout check: does it look like everything the
+  // active tab actually requires to calculate has been said (this
+  // utterance) or already sitting in that field (from before this tap)?
+  // Deliberately mirrors the exact required-field checks calcSpark /
+  // calcInstacart / calcFood / calcShipt already use in calculations.js
+  // (time, miles, offer -- items instead of time for Instacart; tip is
+  // optional everywhere, matching the calc functions) rather than
+  // inventing a separate notion of "required." This is a lightweight
+  // presence check via the same kind of regex the real parser uses below,
+  // not a full parse -- it only has to answer "probably done" vs.
+  // "probably still mid-sentence," not extract exact values, so it can
+  // stay simple and not risk the carefully-tuned recoverFoldedOffer/
+  // TAB_TAIL_PATTERNS logic those functions depend on.
+  function looksLikelyComplete(tab, rawTextSoFar){
+    const t = wordsToDigits(rawTextSoFar);
+    const hasTime = /\d+\s*(?:hours?|hrs?|minutes?|mins?)\b/.test(t);
+    const hasMiles = /\d+(?:\.\d+)?\s*miles?\b/.test(t);
+    const hasDollar = /\d+(?:\.\d+)?\s*dollars?\b/.test(t);
+    const hasItems = /\d+\s*items?\b/.test(t);
+    const filled = id => { const el = document.getElementById(id); return !!(el && el.value !== ''); };
+    if(tab === 'spark'){
+      return (hasTime || filled('spark-time-hr') || filled('spark-time-min'))
+          && (hasMiles || filled('spark-miles'))
+          && (hasDollar || filled('spark-offer'));
+    }
+    if(tab === 'instacart'){
+      return (hasItems || filled('ic-items'))
+          && (hasMiles || filled('ic-miles'))
+          && (hasDollar || filled('ic-offer'));
+    }
+    if(tab === 'food'){
+      return (hasTime || filled('fd-time-hr') || filled('fd-time-min'))
+          && (hasMiles || filled('fd-miles'))
+          && (hasDollar || filled('fd-offer'));
+    }
+    // shipt -- base pay is required, tip is optional, matching calcShipt.
+    return (hasTime || filled('shipt-time-hr') || filled('shipt-time-min'))
+        && (hasMiles || filled('shipt-miles'))
+        && (hasDollar || filled('shipt-base'));
+  }
+
   // Sets one field's value, skipping undefined/null so a field a voice
   // parse didn't recognize is simply left as-is rather than cleared.
   function setVal(id, value){
@@ -424,17 +465,25 @@
         voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] hardCeiling -> stop()');
         try{ recognition.stop(); }catch(e){}
       }, 20000);
-      function armSilenceTimer(){
+      // Adaptive instead of one fixed number for everyone: 1.8s once it
+      // looks like everything the active tab requires has already been
+      // said (via looksLikelyComplete above) -- snappy for someone who
+      // talks fast/cleanly and never needed the longer tolerance -- or 3s
+      // while something required is still evidently missing, which is the
+      // exact real-measured case (see the mic-return-mileage-diagnostic.md
+      // note) where a natural pause before the last field got cut off at
+      // 1.8s. Called fresh on every onresult below with the current
+      // completeness read, so the wait in effect can change mid-utterance
+      // as more gets recognized -- e.g. starts at 3s while time/miles are
+      // still coming in, drops to 1.8s the moment the offer amount is
+      // finally heard too.
+      function armSilenceTimer(likelyComplete){
         clearTimeout(silenceTimer);
-        // 1.8s of quiet after the last bit of speech means "done talking."
-        // Short enough that it doesn't linger noticeably after you finish,
-        // long enough to survive a normal pause between fields ("45
-        // minutes... 12 miles..."). Started at 3.5s, shortened after real
-        // testing showed that felt like it lingered too long once done.
+        const wait = likelyComplete ? 1800 : 3000;
         silenceTimer = setTimeout(()=>{
-          voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] silenceTimer(1.8s) -> stop()');
+          voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] silenceTimer(' + (wait/1000) + 's, ' + (likelyComplete ? 'looked complete' : 'still incomplete') + ') -> stop()');
           try{ recognition.stop(); }catch(e){}
-        }, 1800);
+        }, wait);
       }
 
       recognition.onaudiostart = ()=>{
@@ -453,17 +502,30 @@
       };
       recognition.onresult = (e)=>{
         heardAnything = true;
-        armSilenceTimer();
         const result = e.results[e.results.length - 1];
+        // Completeness is checked against everything heard so far this
+        // session, not just the latest chunk -- concatenating every entry
+        // in e.results rather than assuming iOS always keeps one
+        // continuous utterance under a single result index. Falls back to
+        // "still incomplete" (the safe/patient default) if the active tab
+        // can't be read for any reason.
+        let fullSoFar = '';
+        for(let i=0; i<e.results.length; i++){ fullSoFar += ' ' + e.results[i][0].transcript; }
+        const activeTabEl = document.querySelector('.tab.active');
+        const complete = activeTabEl ? looksLikelyComplete(activeTabEl.dataset.tab, fullSoFar) : false;
+        armSilenceTimer(complete);
         // Logs every result -- interim included -- not just the final one
         // applyVoiceEntry() acts on. That's the point: if "return mileage"
         // shows up in an interim chunk but never in a final one, that's a
         // finalization problem, not an audio-capture problem, and this is
         // the only way to actually tell the two apart. The flag marks any
-        // chunk mentioning return/mile so it's easy to spot at a glance.
+        // chunk mentioning return/mile so it's easy to spot at a glance;
+        // the (complete)/(incomplete) tag shows which wait the NEXT pause
+        // will actually get, so a too-short or too-long wait can be read
+        // straight off this log instead of inferred.
         const text = result[0].transcript;
         const flag = /return|mile/i.test(text) ? ' ⚑' : '';
-        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] #' + e.results.length + ' ' + (result.isFinal ? 'FINAL' : 'interim') + ': "' + text + '"' + flag);
+        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] #' + e.results.length + ' ' + (result.isFinal ? 'FINAL' : 'interim') + ': "' + text + '"' + flag + ' (' + (complete ? 'complete' : 'incomplete') + ')');
         if(result.isFinal){
           applyVoiceEntry(text);
         }

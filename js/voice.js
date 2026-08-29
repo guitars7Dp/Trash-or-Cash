@@ -335,7 +335,6 @@
       resetMicButtonState();
       micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
     }
-    let audioCtx = null;
     // Forces an active CarPlay audio route before starting speech
     // recognition. CarPlay's audio session isn't "live" until some app is
     // actively playing sound through it — if nothing is playing, Safari's
@@ -344,21 +343,36 @@
     // can optimize a fully-silent buffer away and skip opening the route)
     // to force the same live-route behavior music playback already
     // triggers, before the real recognition session is created.
+    //
+    // A fresh AudioContext is created and explicitly close()d every single
+    // call, rather than the one long-lived instance this used to create
+    // once and reuse/keep open for the rest of the page's life. FOUND (not
+    // guessed) to matter: Derek reported the app taking over the mic and
+    // stopping background music just from being brought to the foreground
+    // -- with the mic button never pressed at all. A saved home-screen app
+    // like this one can stay alive in the background across many
+    // open/close cycles without ever truly reloading, so an AudioContext
+    // that's never closed stays "live" for the whole time the app has ever
+    // been open since the last real reload, not just for one tap -- and
+    // iOS re-asserting that page's audio session on every foreground is
+    // exactly what would duck other apps' music each time, with no button
+    // press involved. See claude/mic-takes-over-on-open-fix.md. Only ever
+    // needed for this one ~130ms priming step right before
+    // recognition.start(), so closing it immediately after costs nothing.
     async function primeAudioRoute(){
+      let ctx = null;
       try{
-        if(!audioCtx){
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if(ctx.state === 'suspended'){
+          await ctx.resume();
         }
-        if(audioCtx.state === 'suspended'){
-          await audioCtx.resume();
-        }
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
         gain.gain.value = 0.001;
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(ctx.destination);
         osc.start();
-        osc.stop(audioCtx.currentTime + 0.08);
+        osc.stop(ctx.currentTime + 0.08);
         // This wait is the one piece of latency in the whole tap-to-listen
         // path that's new since last week's version (which used a plain
         // getUserMedia grab/release here instead, with no deliberate pad
@@ -373,6 +387,10 @@
         await new Promise(resolve => setTimeout(resolve, 50));
       }catch(e){
         // If this fails, proceed anyway — no worse off than before this existed.
+      } finally {
+        if(ctx){
+          try{ await ctx.close(); }catch(e){}
+        }
       }
     }
 
@@ -389,43 +407,41 @@
       // failures all showed the exact same fingerprint -- onstart AND
       // onaudiostart both fire (the JS-level session believes it's live),
       // but zero speech is ever recognized for the full 8s until
-      // deadMicTimer aborts it. Restoring a getUserMedia mic-input probe
-      // (see the comment below) did NOT fix this -- confirmed by a later
-      // debug log showing "getUserMedia probe ok" immediately followed by
-      // the exact same dead-audio fingerprint. That rules out the raw mic
-      // hardware route as the cause; it's more likely the recognition
-      // SERVICE session itself (Apple's dictation backend) going stale
-      // after backgrounding, not the microphone hardware, which a JS-level
-      // "wake the mic" probe was never going to fix. Since there's no known
-      // fix for that layer, this instead shrinks the COST of it: a new
-      // quick-dead-check (see armQuickDeadCheck below) detects the same
-      // fingerprint in ~3.5s instead of the full 8s, and automatically
-      // retries once with a completely fresh probe+session before making
-      // the person notice it's dead and re-tap themselves. If the retry
-      // also fails, it falls through to the normal 8s/20s timers and
-      // visible dead-end exactly as before -- this is a mitigation for the
-      // symptom, not a fix for whatever's actually stale on Apple's side.
+      // deadMicTimer aborts it. A navigator.mediaDevices.getUserMedia
+      // mic-input probe was tried here as a fix for that and DISPROVEN --
+      // confirmed by a later debug log showing "getUserMedia probe ok"
+      // immediately followed by the exact same dead-audio fingerprint, so
+      // the raw mic hardware route wasn't the cause. It's more likely the
+      // recognition SERVICE session itself (Apple's dictation backend)
+      // going stale after backgrounding, not the microphone hardware,
+      // which a JS-level "wake the mic" probe was never going to fix.
+      // Since there's no known fix for that layer, this instead shrinks
+      // the COST of it: a new quick-dead-check (see armQuickDeadCheck
+      // below) detects the same fingerprint in ~3.5s instead of the full
+      // 8s, and automatically retries once with a completely fresh
+      // probe+session before making the person notice it's dead and
+      // re-tap themselves. If the retry also fails, it falls through to
+      // the normal 8s/20s timers and visible dead-end exactly as before --
+      // this is a mitigation for the symptom, not a fix for whatever's
+      // actually stale on Apple's side.
       //
-      // getUserMedia({audio:true}) grab-and-release still runs ahead of
-      // primeAudioRoute() on every attempt -- kept even though it didn't
-      // solve this particular bug, since it's still the right, purpose-
-      // built wake for the mic INPUT route (distinct from primeAudioRoute's
-      // audio OUTPUT/CarPlay-routing tone) and may still matter for
-      // whatever original case it was written for.
+      // The getUserMedia probe itself was REMOVED in this round (it was
+      // left in after being disproven above on the theory that it
+      // "couldn't hurt") -- it turned out it could: Derek separately
+      // reported the app taking over the mic and cutting off background
+      // music just from being foregrounded, mic button never pressed.
+      // getUserMedia is the one API in this file that explicitly requests
+      // real microphone RECORDING capability outside of an actual
+      // recognition session, which is exactly the kind of call that can
+      // leave iOS's audio session in a recording-capable state. It never
+      // proved useful for the bug it was added for, so removing it costs
+      // nothing -- recognition.start() below still requests mic access
+      // itself, for real, exactly when actually needed. See
+      // claude/mic-takes-over-on-open-fix.md.
       async function primeMicRoutes(label){
-        try{
-          const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
-          stream.getTracks().forEach(t => t.stop());
-          voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (' + label + ') getUserMedia probe ok');
-        }catch(e){
-          // Don't block voice entry if this fails for any reason -- proceed
-          // to primeAudioRoute() and recognition.start() regardless, same
-          // fallback posture as the rest of this file.
-          voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (' + label + ') getUserMedia probe failed: ' + (e && e.name || e));
-        }
-        if(!listening) return false; // user backed out (re-tapped, or backgrounding kill-switch) while awaiting above
         await primeAudioRoute();
-        if(!listening) return false;
+        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (' + label + ') audio route primed');
+        if(!listening) return false; // user backed out (re-tapped, or backgrounding kill-switch) while awaiting above
         return true;
       }
 

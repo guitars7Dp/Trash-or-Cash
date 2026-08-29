@@ -23,7 +23,18 @@
     try{ return JSON.parse(localStorage.getItem('toc_order_log') || '[]'); }catch(e){ return []; }
   }
   function saveOrderLog(entries){
-    try{ localStorage.setItem('toc_order_log', JSON.stringify(entries)); }catch(e){}
+    // Used to swallow every failure silently, same shape as the bug this
+    // whole change addresses: logOrder()/the click handler always showed
+    // "Logged ✓" regardless of whether this actually wrote anything.
+    // Reporting real success/failure here is what let that be found and
+    // fixed with evidence instead of another guess -- see
+    // claude/order-log-silent-failure-fix.md.
+    try{
+      localStorage.setItem('toc_order_log', JSON.stringify(entries));
+      return { ok:true };
+    }catch(e){
+      return { ok:false, error: (e && e.message) || String(e) };
+    }
   }
   // The "cleared at" cursor for the default filter view — see the big
   // comment above. 0 (never cleared) means "since last clear" shows
@@ -64,8 +75,15 @@
   }
   // Logs the most recent result (see lastResult above) as one entry: the
   // platform, CASH/TRASH verdict, and every estimated number, timestamped.
+  // Returns { ok, reason, error, count } instead of nothing -- Derek
+  // reported tapping LOG IT on several orders that never showed up under
+  // "All Time," meaning the confirmation was lying: this used to run
+  // silently and the click handler always showed "Logged ✓" no matter
+  // what actually happened, so a failure here and a real success looked
+  // identical. Now the caller (the click handler below) can tell the
+  // difference and say so. See claude/order-log-silent-failure-fix.md.
   function logOrder(){
-    if(!lastResult) return;
+    if(!lastResult) return { ok:false, reason:'No calculated result to log yet.' };
     const { r, isCash, platform } = lastResult;
     const entry = {
       ts: Date.now(),
@@ -79,7 +97,17 @@
     };
     const entries = loadOrderLog();
     entries.push(entry);
-    saveOrderLog(entries);
+    const saved = saveOrderLog(entries);
+    if(!saved.ok) return { ok:false, reason:'Storage write failed.', error: saved.error };
+    // Read back what's actually in storage rather than trusting that the
+    // write above did what it claimed -- this is the part that actually
+    // catches a silent failure instead of just moving where the trust is.
+    const verify = loadOrderLog();
+    const last = verify[verify.length - 1];
+    if(verify.length !== entries.length || !last || last.ts !== entry.ts){
+      return { ok:false, reason:'Entry did not verify after saving.', count: verify.length };
+    }
+    return { ok:true, count: verify.length };
   }
 
   // Puts the "Did you take it?" yes/no buttons back to their default
@@ -96,9 +124,23 @@
   const tracklogYesBtn = document.getElementById('tracklogYes');
   if(tracklogYesBtn){
     tracklogYesBtn.addEventListener('click', ()=>{
-      logOrder();
-      document.getElementById('tracklogBtns').classList.add('hidden');
-      document.getElementById('tracklogConfirm').classList.remove('hidden');
+      const result = logOrder();
+      if(result.ok){
+        document.getElementById('tracklogBtns').classList.add('hidden');
+        const confirmEl = document.getElementById('tracklogConfirm');
+        // Includes the running total so a success message actually means
+        // something verified, not just "this function ran." If the count
+        // ever doesn't go up the way you expect, that's itself a signal
+        // worth reporting back, same as an outright failure would be.
+        confirmEl.textContent = 'Logged ✓ (' + result.count + ' total)';
+        confirmEl.classList.remove('hidden');
+      } else {
+        // Previously this branch didn't exist -- logOrder() ran silently
+        // and the "Logged ✓" confirmation showed unconditionally, whether
+        // or not anything was actually saved. Surfaced for real now rather
+        // than a false positive.
+        window.alert('Could not log this order: ' + result.reason + (result.error ? ' (' + result.error + ')' : '') + '\n\nNothing was saved -- try LOG IT again.');
+      }
     });
   }
 

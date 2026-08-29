@@ -385,25 +385,37 @@
       const tapStartedAt = Date.now();
       voiceDebugLog('[+0ms] tap');
 
-      // iOS can leave the underlying audio route to the mic stale after the
-      // app is backgrounded — SpeechRecognition's own onaudiostart/onstart
-      // can fire normally (the JS-level session believes it's running) while
-      // no real audio ever reaches it, until our own hard-stop timer cuts it
-      // off with no result and no real error. A getUserMedia grab-and-release
-      // forces iOS to re-establish that route. This differs from an earlier,
-      // unsuccessful attempt at the same idea: that one ran proactively in a
-      // visibilitychange handler and could overlap with an already-live
-      // recognition session, fighting it for the mic. This instead runs
-      // exactly once, synchronously, right here at tap-time — fully
-      // requested AND released before a SpeechRecognition instance is ever
-      // created, so there's nothing for it to compete with.
-      
-            // Detect CarPlay as the active audio output. The mic probe below exists
-      // to fix a different bug (stale mic after backgrounding) and has been
-      // found to break recognition entirely when CarPlay owns the audio
-      // session — so it's skipped in that case rather than risking a hang or
-      // leaving the mic in a broken state.
-                  await primeAudioRoute();
+      // FOUND via the debug log, not guessed: several post-backgrounding
+      // failures all showed the exact same fingerprint -- onstart AND
+      // onaudiostart both fire (the JS-level session believes it's live),
+      // but zero speech is ever recognized for the full 8s until
+      // deadMicTimer aborts it. That's the classic stale-mic-route symptom
+      // this file has documented since the original version, and the
+      // comment that used to sit here still described the ORIGINAL fix for
+      // it (a getUserMedia grab-and-release) even though that call got
+      // swapped out for primeAudioRoute() during an earlier round aimed at
+      // a different problem (CarPlay/other-app audio ducking) -- the
+      // comment and the code had drifted apart. The two aren't
+      // interchangeable: getUserMedia({audio:true}) specifically wakes the
+      // MIC INPUT route (what SpeechRecognition itself needs), while
+      // primeAudioRoute()'s tone only exercises audio OUTPUT/playback
+      // routing -- a different half of the audio session. Swapping instead
+      // of keeping both likely dropped the fix for this exact bug. Restored
+      // the getUserMedia probe here, ahead of primeAudioRoute(), so both
+      // routes get woken -- mic input for this bug, output for the
+      // CarPlay/ducking one primeAudioRoute was added for.
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+        stream.getTracks().forEach(t => t.stop());
+        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] getUserMedia probe ok');
+      }catch(e){
+        // Don't block voice entry if this fails for any reason -- proceed
+        // to primeAudioRoute() and recognition.start() regardless, same
+        // fallback posture as the rest of this file.
+        voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] getUserMedia probe failed: ' + (e && e.name || e));
+      }
+      if(!listening) return; // user backed out (re-tapped) while awaiting above
+      await primeAudioRoute();
       if(!listening) return; // user backed out (re-tapped) while awaiting above
 
 

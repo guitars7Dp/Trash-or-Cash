@@ -1,4 +1,4 @@
-// ---------- Voice entry ----------
+  // ---------- Voice entry ----------
   // Word-to-number lookup tables for wordsToDigits() below.
   const ONES_WORDS = { zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9,
     ten:10, eleven:11, twelve:12, thirteen:13, fourteen:14, fifteen:15, sixteen:16, seventeen:17, eighteen:18, nineteen:19 };
@@ -344,21 +344,37 @@
     // to force the same live-route behavior music playback already
     // triggers, before the real recognition session is created.
     //
-    // A fresh AudioContext is created and explicitly close()d every single
-    // call, rather than the one long-lived instance this used to create
-    // once and reuse/keep open for the rest of the page's life. FOUND (not
-    // guessed) to matter: Derek reported the app taking over the mic and
-    // stopping background music just from being brought to the foreground
-    // -- with the mic button never pressed at all. A saved home-screen app
-    // like this one can stay alive in the background across many
-    // open/close cycles without ever truly reloading, so an AudioContext
-    // that's never closed stays "live" for the whole time the app has ever
-    // been open since the last real reload, not just for one tap -- and
-    // iOS re-asserting that page's audio session on every foreground is
-    // exactly what would duck other apps' music each time, with no button
-    // press involved. See claude/mic-takes-over-on-open-fix.md. Only ever
-    // needed for this one ~130ms priming step right before
-    // recognition.start(), so closing it immediately after costs nothing.
+    // A fresh AudioContext is created every attempt rather than the one
+    // long-lived instance this used to create once and reuse/keep open for
+    // the rest of the page's life. FOUND (not guessed) to matter: Derek
+    // reported the app taking over the mic and stopping background music
+    // just from being brought to the foreground -- with the mic button
+    // never pressed at all. A saved home-screen app like this one can stay
+    // alive in the background across many open/close cycles without ever
+    // truly reloading, so an AudioContext that's never closed stays "live"
+    // for the whole time the app has ever been open since the last real
+    // reload, not just for one tap -- and iOS re-asserting that page's
+    // audio session on every foreground is exactly what would duck other
+    // apps' music each time, with no button press involved. See
+    // claude/mic-takes-over-on-open-fix.md.
+    //
+    // IMPORTANT: this function does NOT close the context itself. An
+    // earlier version of this fix closed it immediately, right here, right
+    // after the priming tone -- which shortly after caused a new, much
+    // worse regression Derek reported ("doesn't hear me like 50% of the
+    // time"): closing the very AudioContext that just forced the audio
+    // route live, mere milliseconds before recognition.start() needs that
+    // same route, is a real race -- iOS may not finish tearing the route
+    // down and bringing it back up again in time, which is a highly
+    // plausible way to end up with exactly the "recognition starts but
+    // doesn't actually hear anything" symptom this whole priming step
+    // exists to prevent in the first place. The context is returned here
+    // instead, and the caller (startAttempt below) closes it only once
+    // that attempt's own recognition session has actually ended -- still
+    // never kept alive longer than one attempt (so the original
+    // foreground/music-ducking bug stays fixed), just no longer torn down
+    // at the one moment it's still needed. See
+    // claude/mic-audiocontext-close-race-fix.md.
     async function primeAudioRoute(){
       let ctx = null;
       try{
@@ -387,11 +403,8 @@
         await new Promise(resolve => setTimeout(resolve, 50));
       }catch(e){
         // If this fails, proceed anyway — no worse off than before this existed.
-      } finally {
-        if(ctx){
-          try{ await ctx.close(); }catch(e){}
-        }
       }
+      return ctx; // caller closes this once the attempt it belongs to actually ends -- see note above
     }
 
     micBtn.addEventListener('click', async ()=>{
@@ -439,10 +452,16 @@
       // itself, for real, exactly when actually needed. See
       // claude/mic-takes-over-on-open-fix.md.
       async function primeMicRoutes(label){
-        await primeAudioRoute();
+        const ctx = await primeAudioRoute();
         voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (' + label + ') audio route primed');
-        if(!listening) return false; // user backed out (re-tapped, or backgrounding kill-switch) while awaiting above
-        return true;
+        if(!listening){
+          // Backed out (re-tapped, or backgrounding kill-switch) while awaiting
+          // above -- nothing is going to use this context now, so close it
+          // right away instead of leaking it.
+          if(ctx){ try{ ctx.close(); }catch(e){} }
+          return { ok:false, ctx:null };
+        }
+        return { ok:true, ctx };
       }
 
       // One full listen attempt: create a fresh recognition instance, wire
@@ -453,7 +472,12 @@
       // attemptNum is 1 for the original tap, 2 for the retry -- only
       // attempt 1 ever arms the quick-dead-check, so a retry that also
       // fails falls through to the plain 8s/20s timers instead of looping.
-      function startAttempt(attemptNum){
+      // primedCtx is the AudioContext primeMicRoutes() already created and
+      // primed for THIS attempt (or null if priming failed) -- closed once,
+      // right here, whenever this attempt's recognition session actually
+      // ends, rather than by primeAudioRoute() itself. See the note on
+      // primeAudioRoute() above for why.
+      function startAttempt(attemptNum, primedCtx){
         const recognition = new SpeechRec(); // fresh instance every attempt, on purpose
         recognition.lang = 'en-US';
         // interimResults is permanently on — not diagnostic scaffolding.
@@ -525,9 +549,9 @@
               clearTimeout(deadMicTimer); clearTimeout(hardCeiling); clearTimeout(silenceTimer);
               try{ recognition.abort(); }catch(e){}
               micBtn.querySelector('.mic-label').textContent = 'RETRYING…';
-              primeMicRoutes('retry').then(ok=>{
-                if(!ok || !listening) return; // backed out, or backgrounded again, during the retry's own probe
-                startAttempt(2);
+              primeMicRoutes('retry').then(primed=>{
+                if(!primed.ok || !listening) return; // backed out, or backgrounded again, during the retry's own probe
+                startAttempt(2, primed.ctx);
               });
             }
           }, 3500);
@@ -615,6 +639,14 @@
           clearTimeout(silenceTimer);
           clearTimeout(quickDeadCheck);
           voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (attempt ' + attemptNum + ') end');
+          // This attempt's own primed AudioContext is done being needed the
+          // moment its recognition session ends, whether that's a clean
+          // finish, an error, or the abort() that kicks off a retry -- closed
+          // here, not by primeAudioRoute() itself (see the note up there).
+          // Unconditional (not skipped during a retry hand-off): a retry
+          // hand-off means THIS attempt is over and attempt 2 will prime and
+          // own its own fresh context, so this one is genuinely done with.
+          if(primedCtx){ try{ primedCtx.close(); }catch(e){} }
           // Swallow this quietly during a deliberate internal hand-off to
           // the retry -- resetting listening/the button here would break
           // the retry's own "if(!listening) return" guards and make it
@@ -642,15 +674,27 @@
         const settleDelay = isFirstMicUse ? 300 : 150;
         isFirstMicUse = false;
         setTimeout(()=>{
-          if(!listening) return; // user backed out during this brief wait
+          if(!listening){
+            // User backed out during this brief wait -- recognition.start()
+            // never runs, so onend above will never fire to close this
+            // attempt's primed context. Close it here instead so it's not
+            // just left open.
+            if(primedCtx){ try{ primedCtx.close(); }catch(e){} }
+            return;
+          }
           try{ recognition.start(); }
-          catch(e){ resetMicButton(); }
+          catch(e){
+            // start() itself threw -- same reasoning as above, onend won't
+            // fire for a session that never started.
+            if(primedCtx){ try{ primedCtx.close(); }catch(e){} }
+            resetMicButton();
+          }
         }, settleDelay);
       }
 
-      const probesOk = await primeMicRoutes('initial');
-      if(!probesOk) return;
-      startAttempt(1);
+      const primed = await primeMicRoutes('initial');
+      if(!primed.ok) return;
+      startAttempt(1, primed.ctx);
     });
 
     // Extra safety net: if the tab/app gets backgrounded (e.g. switching
@@ -710,3 +754,4 @@
 
   document.getElementById('clearFieldsBtn').addEventListener('click', clearActiveTabFields);
   document.getElementById('calculateBtn').addEventListener('click', calculateNow);
+

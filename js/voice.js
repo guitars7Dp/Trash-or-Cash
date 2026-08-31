@@ -569,11 +569,42 @@
         // as more gets recognized -- e.g. starts at 3s while time/miles are
         // still coming in, drops to 1.8s the moment the offer amount is
         // finally heard too.
+        //
+        // FOUND (not guessed -- found re-reading this specific function
+        // after Derek asked whether anything could still be cutting things
+        // off) a real gap here: looksLikelyComplete() only checks the
+        // fields calculations.js actually REQUIRES -- time/miles/offer (or
+        // items for Instacart). Return miles (Spark/Shipt) and tip (Shipt)
+        // are optional for the math, so they were never part of "complete,"
+        // which means the FIRST moment the required fields are heard --
+        // e.g. right after the offer amount -- this immediately dropped to
+        // the snappy 1.8s wait, even for someone who still intends to add
+        // "...and 12 miles return" right after. That's the most likely
+        // explanation for the exact "return miles cut off" pattern Derek
+        // hit right after this adaptive timeout first shipped. completeSeenCount
+        // fixes it without needing to special-case which fields are
+        // optional: the FIRST time an utterance looks complete always still
+        // gets the full patient 3s (same as "incomplete" would -- no
+        // regression for anyone), giving room for an optional trailing
+        // field. Only if they pause AGAIN after that (meaning: they kept
+        // talking past the first complete point, then stopped) does the
+        // snappy 1.8s kick in, on the theory that a second pause after
+        // already-complete fields really is them being done. Per-attempt
+        // (declared with the rest of this attempt's state), so a fresh
+        // attempt (including the auto-retry's attempt 2) always starts
+        // this count over.
+        let completeSeenCount = 0;
         function armSilenceTimer(likelyComplete){
           clearTimeout(silenceTimer);
-          const wait = likelyComplete ? 1800 : 3000;
+          let wait;
+          if(likelyComplete){
+            completeSeenCount++;
+            wait = completeSeenCount > 1 ? 1800 : 3000;
+          } else {
+            wait = 3000;
+          }
           silenceTimer = setTimeout(()=>{
-            voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (attempt ' + attemptNum + ') silenceTimer(' + (wait/1000) + 's, ' + (likelyComplete ? 'looked complete' : 'still incomplete') + ') -> stop()');
+            voiceDebugLog('[+' + (Date.now()-tapStartedAt) + 'ms] (attempt ' + attemptNum + ') silenceTimer(' + (wait/1000) + 's, ' + (likelyComplete ? 'looked complete #'+completeSeenCount : 'still incomplete') + ') -> stop()');
             try{ recognition.stop(); }catch(e){}
           }, wait);
         }

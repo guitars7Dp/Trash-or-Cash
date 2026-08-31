@@ -263,6 +263,28 @@
   if(!SpeechRec){
     micBtn.style.display = 'none';
   } else {
+    // Explicitly declare this page's audio session category via the real,
+    // documented AudioSession Web API (navigator.audioSession, supported in
+    // iOS Safari since 16.4 -- see
+    // https://developer.mozilla.org/en-US/docs/Web/API/AudioSession), rather
+    // than only closing AudioContext/SpeechRecognition objects and hoping
+    // iOS infers the right category on its own. That inference-based
+    // approach is what every earlier round of the mic-steals-background-music
+    // bug relied on, and it kept coming back with no code change at all --
+    // consistent with iOS deciding the session category itself, sometimes
+    // sticking with a "recording-capable" category across foreground/
+    // background cycles even after every AudioContext/recognition object is
+    // closed. This sets the category directly instead of leaving it to
+    // inference: 'ambient' (mixes with/never interrupts other apps' audio)
+    // any time nothing is actively listening, switched to 'play-and-record'
+    // only for the moment a tap's recognition session is genuinely running,
+    // and back to 'ambient' the instant that session ends. Set once here at
+    // setup time so the very first foreground of a freshly-loaded page is
+    // already explicit, not left on iOS's automatic default.
+    if(typeof navigator !== 'undefined' && navigator.audioSession){
+      try{ navigator.audioSession.type = 'ambient'; }catch(e){}
+    }
+
     let listening = false;
     let activeRecognition = null;
 
@@ -416,14 +438,27 @@
       }, 20000);
       function armSilenceTimer(){
         clearTimeout(silenceTimer);
-        // 1.8s of quiet after the last bit of speech means "done talking."
-        // Short enough that it doesn't linger noticeably after you finish,
-        // long enough to survive a normal pause between fields ("45
-        // minutes... 12 miles..."). Started at 3.5s, shortened after real
-        // testing showed that felt like it lingered too long once done.
+        // 2.5s of quiet after the last bit of speech means "done talking."
+        // This was 1.8s in the pre-8/28 baseline this file was reverted
+        // back to on 8/31 -- but 1.8s is the exact threshold documented in
+        // claude/mic-return-mileage-diagnostic.md Finding #1 as the root
+        // cause of the original "37 dollars got cut off" report: a real
+        // order log showed the silence timer firing at 1802ms, cutting the
+        // session before the last spoken field was heard at all. Reverting
+        // the rest of that week's stacked changes (adaptive/completeness-
+        // aware timing, retries, debug log) on 8/31 necessarily brought
+        // that flat 1.8s value back too, and the same class of cutoff
+        // (last field, usually $/order, dropped) recurred exactly as
+        // expected. 3.5s (the value before 1.8s) was tried previously and
+        // rejected as feeling laggy after you're actually done talking.
+        // 2.5s is a deliberate middle ground: real margin over the
+        // measured 1802ms failure point, without reintroducing any of the
+        // dropped adaptive machinery -- still one flat number, same as the
+        // reverted baseline, just tuned using the one real data point
+        // already on record instead of guessed.
         silenceTimer = setTimeout(()=>{
           try{ recognition.stop(); }catch(e){}
-        }, 1800);
+        }, 2500);
       }
 
       recognition.onaudiostart = ()=>{
@@ -484,6 +519,15 @@
           try{ await primedCtx.close(); }catch(e){}
           await new Promise(resolve => setTimeout(resolve, 150));
         }
+        // Explicitly hand the audio session category back to 'ambient' the
+        // instant this tap's session ends, whether it finished cleanly,
+        // errored, or was aborted -- see the note on navigator.audioSession
+        // above. This is what actually releases the recording-capable
+        // category (a real, declared change) instead of just closing the
+        // objects and hoping iOS notices.
+        if(typeof navigator !== 'undefined' && navigator.audioSession){
+          try{ navigator.audioSession.type = 'ambient'; }catch(e){}
+        }
         resetMicButton();
       };
       // Small settle delay after the handshake, before actually starting
@@ -505,10 +549,22 @@
           if(primedCtx){ try{ primedCtx.close(); }catch(e){} }
           return;
         }
-        try{ recognition.start(); }
+        try{
+          // Declare the real recording-capable category only for the
+          // instant recognition.start() actually runs -- paired with the
+          // reset back to 'ambient' in onend/the catch below. See the note
+          // on navigator.audioSession above.
+          if(typeof navigator !== 'undefined' && navigator.audioSession){
+            try{ navigator.audioSession.type = 'play-and-record'; }catch(e){}
+          }
+          recognition.start();
+        }
         catch(e){
           // start() itself threw -- same reasoning as above, onend won't
           // fire for a session that never started.
+          if(typeof navigator !== 'undefined' && navigator.audioSession){
+            try{ navigator.audioSession.type = 'ambient'; }catch(e){}
+          }
           if(primedCtx){ try{ primedCtx.close(); }catch(e){} }
           resetMicButton();
         }

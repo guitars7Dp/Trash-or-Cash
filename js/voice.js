@@ -265,7 +265,6 @@
   } else {
     let listening = false;
     let activeRecognition = null;
-    let isFirstMicUse = true; // first tap per page load needs a touch more settle time
 
     function resetMicButtonState(){
       listening = false;
@@ -276,7 +275,6 @@
       resetMicButtonState();
       micBtn.querySelector('.mic-label').textContent = 'TAP TO SPEAK';
     }
-    let audioCtx = null;
     // Forces an active CarPlay audio route before starting speech
     // recognition. CarPlay's audio session isn't "live" until some app is
     // actively playing sound through it — if nothing is playing, Safari's
@@ -285,25 +283,45 @@
     // can optimize a fully-silent buffer away and skip opening the route)
     // to force the same live-route behavior music playback already
     // triggers, before the real recognition session is created.
+    //
+    // A fresh AudioContext is created every tap and returned to the caller,
+    // which is responsible for closing it once that tap's recognition
+    // session actually ends -- NOT one long-lived instance created once and
+    // reused/left open for the rest of the page's life, which is what this
+    // used to do. That's what let the app duck background music (YouTube,
+    // Spotify, etc.) just from being brought to the foreground, mic button
+    // never pressed: a saved home-screen app can stay alive across many
+    // open/close cycles without truly reloading, so an AudioContext that's
+    // never closed stays "live" for as long as the app has ever been open
+    // since the last real reload -- and iOS re-asserting that page's audio
+    // session on every foreground is exactly what ducks other apps' audio
+    // each time, with no button press involved. See
+    // claude/mic-takes-over-on-open-fix.md. Deliberately NOT closed here,
+    // immediately after the priming tone -- that was tried once, and it
+    // introduced a worse, separate bug (closing the very route that was
+    // just forced live, moments before recognition.start() needs that same
+    // route, is a race iOS doesn't always win) -- so the context stays open
+    // until the caller's recognition session actually ends. See
+    // claude/mic-audiocontext-close-race-fix.md for that history.
     async function primeAudioRoute(){
+      let ctx = null;
       try{
-        if(!audioCtx){
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if(ctx.state === 'suspended'){
+          await ctx.resume();
         }
-        if(audioCtx.state === 'suspended'){
-          await audioCtx.resume();
-        }
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
         gain.gain.value = 0.001;
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(ctx.destination);
         osc.start();
-        osc.stop(audioCtx.currentTime + 0.08);
+        osc.stop(ctx.currentTime + 0.08);
         await new Promise(resolve => setTimeout(resolve, 100));
       }catch(e){
         // If this fails, proceed anyway — no worse off than before this existed.
       }
+      return ctx; // caller closes this once its recognition session ends
     }
 
     micBtn.addEventListener('click', async ()=>{
@@ -330,8 +348,14 @@
       // found to break recognition entirely when CarPlay owns the audio
       // session — so it's skipped in that case rather than risking a hang or
       // leaving the mic in a broken state.
-                  await primeAudioRoute();
-      if(!listening) return; // user backed out (re-tapped) while awaiting above
+                  const primedCtx = await primeAudioRoute();
+      if(!listening){
+        // Backed out (re-tapped) while awaiting above -- nothing is going
+        // to use this context now, so close it right away instead of
+        // leaking it.
+        if(primedCtx){ try{ primedCtx.close(); }catch(e){} }
+        return;
+      }
 
 
 
@@ -429,29 +453,65 @@
         // that ever changes and this is worth revisiting.
         console.log('SpeechRecognition error:', e.error);
       };
-      recognition.onend = ()=>{
+      recognition.onend = async ()=>{
         clearTimeout(deadMicTimer);
         clearTimeout(hardCeiling);
         clearTimeout(silenceTimer);
+        // This tap's primed AudioContext is done being needed the moment
+        // its recognition session ends, whether that's a clean finish, an
+        // error, or the dead-mic abort() -- closed here, not right after
+        // priming (see the note on primeAudioRoute() above for why).
+        //
+        // AWAITED, with an extra ~150ms grace period after close() resolves,
+        // before resetMicButton() runs (which is what allows the NEXT tap to
+        // begin). Learned this exact lesson once already and don't want to
+        // relearn it: close()'s promise resolving only confirms the
+        // JS-level teardown finished, not that iOS has actually released
+        // the underlying hardware audio session yet -- starting a brand new
+        // AudioContext/recognition too soon after can silently claim a
+        // route iOS hasn't finished tearing down, so recognition.start()
+        // looks like it succeeded (onstart/onaudiostart still fire) with no
+        // real audio ever reaching it. That was the exact root cause of a
+        // "mic only works the first tap, dead every tap after" bug from a
+        // previous round (see claude/mic-second-tap-dead-fix.md) -- this
+        // fix closes every tap's context (needed so the app doesn't hold
+        // the mic open indefinitely and duck other apps' audio just from
+        // being foregrounded, see claude/mic-takes-over-on-open-fix.md),
+        // so it has to also give iOS the same real beat to finish releasing
+        // the hardware before the button re-arms, or that old bug comes
+        // right back paired with this one.
+        if(primedCtx){
+          try{ await primedCtx.close(); }catch(e){}
+          await new Promise(resolve => setTimeout(resolve, 150));
+        }
         resetMicButton();
       };
       // Small settle delay after the handshake, before actually starting
-      // recognition. On iOS the mic hardware can need a brief beat to
-      // catch up even after the handshake resolves, and the "Listening"
-      // label can flip on before real audio is actually flowing. Kept as
-      // short as possible (150ms) so it's not noticeable, while still
-      // giving the engine a moment to be ready before we trust it. The
-      // very first tap per page load gets a slightly longer settle (300ms)
-      // since everything (handshake, engine, audio session) is spinning up
-      // cold for the first time and has been observed to clip the very
-      // start of speech otherwise; every tap after that uses the shorter,
-      // near-imperceptible delay.
-      const settleDelay = isFirstMicUse ? 300 : 150;
-      isFirstMicUse = false;
+      // recognition. On iOS the mic hardware can need a brief beat to catch
+      // up even after the handshake resolves, and the "Listening" label can
+      // flip on before real audio is actually flowing. Flat 300ms on every
+      // tap, not just the first -- every tap now does a real
+      // create-audio-context / prime / (eventually) close cycle, so every
+      // tap is effectively a cold start for the audio session, not just the
+      // very first one per page load (a shorter delay on later taps was
+      // tried once when that assumption no longer held and contributed to
+      // the same dead-second-tap bug referenced above).
+      const settleDelay = 300;
       setTimeout(()=>{
-        if(!listening) return; // user backed out during this brief wait
+        if(!listening){
+          // User backed out during this brief wait -- recognition.start()
+          // never runs, so onend above will never fire to close this
+          // context. Close it here instead so it's not left open.
+          if(primedCtx){ try{ primedCtx.close(); }catch(e){} }
+          return;
+        }
         try{ recognition.start(); }
-        catch(e){ resetMicButton(); }
+        catch(e){
+          // start() itself threw -- same reasoning as above, onend won't
+          // fire for a session that never started.
+          if(primedCtx){ try{ primedCtx.close(); }catch(e){} }
+          resetMicButton();
+        }
       }, settleDelay);
     });
 

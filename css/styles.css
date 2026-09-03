@@ -78,6 +78,18 @@
     font-family:'IBM Plex Sans', -apple-system, sans-serif;
     min-height:100%;
     overscroll-behavior:none;
+    /* Disable text selection and iOS's press-and-hold callout (the
+       copy/paste, "Look Up", share-sheet popup) app-wide by default --
+       nothing in the UI should look "selectable" on a long press unless
+       it's an actual text box. user-select is inherited, so this one rule
+       covers every label, button, heading, div and svg; explicitly
+       re-enabled just below for the text/number inputs Derek types into. */
+    -webkit-user-select:none; user-select:none;
+    -webkit-touch-callout:none;
+  }
+  input[type="text"], input[type="number"]{
+    -webkit-user-select:text; user-select:text;
+    -webkit-touch-callout:default;
   }
   .app{ max-width:460px; margin:0 auto; padding:18px 16px 40px; min-height:100vh; }
   /* ---------- Header / Logo ---------- */

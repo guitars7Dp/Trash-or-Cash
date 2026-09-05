@@ -186,18 +186,20 @@
   if(logFilterSelect){
     logFilterSelect.addEventListener('change', renderLogView);
   }
-  // Exports whatever the current filter is showing as CSV text to the
-  // clipboard (falling back to a plain prompt() dialog — selectable/
+  // Exports whatever the current filter is showing as tab-delimited text to
+  // the clipboard (falling back to a plain prompt() dialog — selectable/
   // copyable by hand — on browsers or permission states where the
   // Clipboard API isn't available), for pasting into a spreadsheet to
-  // compare estimates against reality.
+  // compare estimates against reality. Tabs (not commas) are used as the
+  // separator because Numbers and Excel only auto-split pasted plain text
+  // into columns on tabs — commas paste as one literal string per row.
   document.getElementById('copyLogBtn').addEventListener('click', ()=>{
     const { entries } = getFilteredEntries();
-    let csv = 'Date,Platform,App Said,App Est $/hr\n';
+    let csv = ['Date','Platform','App Said','App Est $/hr'].join('\t') + '\n';
     entries.forEach(e=>{
       const d = new Date(e.ts);
       const dateStr = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
-      csv += [dateStr, e.platform, e.verdict, e.estNet].join(',') + '\n';
+      csv += [dateStr, e.platform, e.verdict, e.estNet].join('\t') + '\n';
     });
     if(navigator.clipboard && navigator.clipboard.writeText){
       navigator.clipboard.writeText(csv).then(()=>{

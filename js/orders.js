@@ -215,6 +215,38 @@
       window.prompt('Copy this:', csv);
     }
   });
+  // Builds a standalone CSV file (real commas + a header row, since this is
+  // its own fresh file rather than something pasted into an existing sheet
+  // — Numbers/Sheets/Excel all correctly auto-detect commas when *opening*
+  // a .csv file, even though they don't when *pasting* plain text) and
+  // hands it to the OS share sheet so the user can email it to themselves,
+  // AirDrop it, save it to Files, etc. Only shown on platforms that support
+  // sharing files — WebKit (Safari and any WKWebView-based native wrapper)
+  // handles navigator.share() natively, no extra native code required.
+  const shareLogBtn = document.getElementById('shareLogBtn');
+  if(shareLogBtn){
+    const testFile = new File(['test'], 'test.csv', { type: 'text/csv' });
+    const canShareFiles = navigator.canShare && navigator.canShare({ files: [testFile] });
+    if(canShareFiles){
+      shareLogBtn.style.display = '';
+      shareLogBtn.addEventListener('click', async ()=>{
+        const { entries } = getFilteredEntries();
+        let csv = ['Date','Platform','App Said','App Est $/hr'].join(',') + '\n';
+        entries.forEach(e=>{
+          const d = new Date(e.ts);
+          const dateStr = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
+          csv += [dateStr, e.platform, e.verdict, e.estNet].join(',') + '\n';
+        });
+        const file = new File([csv], `trash-or-cash-log-${Date.now()}.csv`, { type: 'text/csv' });
+        try{
+          await navigator.share({ files: [file], title: 'Trash or Cash Log' });
+        }catch(err){
+          // User cancelled the share sheet, or the OS blocked it — either
+          // way there's nothing to recover from here, just let it drop.
+        }
+      });
+    }
+  }
   // Non-destructive: nothing is ever deleted from storage here. This just
   // moves the "cleared at" cursor to now, so the default "Since last
   // clear" view starts fresh — past entries stay fully intact and

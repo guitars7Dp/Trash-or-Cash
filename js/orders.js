@@ -195,7 +195,10 @@
   // into columns on tabs — commas paste as one literal string per row.
   document.getElementById('copyLogBtn').addEventListener('click', ()=>{
     const { entries } = getFilteredEntries();
-    let csv = ['Date','Platform','App Said','App Est $/hr'].join('\t') + '\n';
+    // No header row here on purpose — this is meant to be pasted straight
+    // into an existing tracker sheet that already has its own header row,
+    // so including one here would just create a duplicate.
+    let csv = '';
     entries.forEach(e=>{
       const d = new Date(e.ts);
       const dateStr = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();

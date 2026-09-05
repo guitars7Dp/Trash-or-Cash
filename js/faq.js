@@ -58,6 +58,10 @@
     {
       q: 'What does "Did you take it?" do?',
       a: "Keeps track of the orders you take so you can export them to a spreadsheet and compare the app's estimate to what really happened. Nothing leaves the app unless you copy it out yourself. Find it in Settings under \"ORDER LOG.\""
+    },
+    {
+      q: 'How do I get the CSV into a spreadsheet?',
+      a: 'Save the file first, then open it from inside your spreadsheet app — most apps only import shared files that way, not from a preview screen.'
     }
   ];
 
